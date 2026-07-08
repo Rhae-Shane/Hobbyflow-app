@@ -8,9 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../../App';
+import { useRouter } from 'expo-router';
 import { useGeneratePlan } from '../../shared/api/queries';
 import { usePlanStore } from '../../shared/store/usePlanStore';
 import { colors, radii, spacing } from '../../shared/theme/tokens';
@@ -36,10 +34,8 @@ const LOADING_MESSAGES = [
   'Almost done...',
 ];
 
-type Navigation = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
-
 export function OnboardingScreen() {
-  const navigation = useNavigation<Navigation>();
+  const router = useRouter();
   const setProfile = usePlanStore((s) => s.setProfile);
   const generatePlan = useGeneratePlan();
 
@@ -73,7 +69,7 @@ export function OnboardingScreen() {
         goal: parsed.data.goal,
         timeBudget: parsed.data.timeBudget,
       });
-      navigation.replace('Roadmap');
+      router.replace('/(app)/(tabs)');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate plan');
     } finally {
