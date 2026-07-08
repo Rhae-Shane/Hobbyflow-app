@@ -1,5 +1,5 @@
 import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '../../src/shared/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AppLayout() {
   const { user } = useAuth();

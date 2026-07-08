@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
-import { useAuth } from '../src/shared/hooks/useAuth';
-import { usePlanStore } from '../src/shared/store/usePlanStore';
+import { useAuth } from '@/hooks/useAuth';
+import { usePlanStore } from '@/store/usePlanStore';
 
 export default function Index() {
   const { user } = useAuth();

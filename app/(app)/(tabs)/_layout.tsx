@@ -1,6 +1,6 @@
 import { Redirect, Tabs } from 'expo-router';
-import { usePlanStore } from '../../../src/shared/store/usePlanStore';
-import { colors } from '../../../src/shared/theme/tokens';
+import { usePlanStore } from '@/store/usePlanStore';
+import { colors } from '@/constants/tokens';
 
 export default function TabsLayout() {
   const plan = usePlanStore((s) => s.plan);

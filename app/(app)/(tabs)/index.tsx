@@ -1,3 +1,3 @@
-import { RoadmapScreen } from '../../../src/features/roadmap/RoadmapScreen';
+import { RoadmapScreen } from '@/components/roadmap/RoadmapScreen';
 
 export default RoadmapScreen;

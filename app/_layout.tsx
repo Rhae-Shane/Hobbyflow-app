@@ -3,10 +3,10 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { useAuth } from '../src/shared/hooks/useAuth';
-import { useHydrateUserPlan } from '../src/shared/hooks/useHydrateUserPlan';
-import { usePlanStore } from '../src/shared/store/usePlanStore';
-import { colors } from '../src/shared/theme/tokens';
+import { useAuth } from '@/hooks/useAuth';
+import { useHydrateUserPlan } from '@/hooks/useHydrateUserPlan';
+import { usePlanStore } from '@/store/usePlanStore';
+import { colors } from '@/constants/tokens';
 
 const queryClient = new QueryClient();
 

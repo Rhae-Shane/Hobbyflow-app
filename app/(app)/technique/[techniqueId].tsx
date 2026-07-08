@@ -1,3 +1,3 @@
-import { TechniqueDetailScreen } from '../../../src/features/technique/TechniqueDetailScreen';
+import { TechniqueDetailScreen } from '@/components/technique/TechniqueDetailScreen';
 
 export default TechniqueDetailScreen;

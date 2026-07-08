@@ -1,3 +1,3 @@
-import { ProgressScreen } from '../../../src/features/progress/ProgressScreen';
+import { ProgressScreen } from '@/components/progress/ProgressScreen';
 
 export default ProgressScreen;

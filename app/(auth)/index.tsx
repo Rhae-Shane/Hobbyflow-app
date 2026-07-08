@@ -1,3 +1,3 @@
-import { AuthScreen } from '../../src/features/auth/AuthScreen';
+import { AuthScreen } from '@/components/auth/AuthScreen';
 
 export default AuthScreen;
