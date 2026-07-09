@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,18 +9,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { InlineError } from '@/components/ui/InlineError';
 import { toAuthError } from '@/lib/errors';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/lib/auth';
-import { usePlanStore } from '@/store/usePlanStore';
 import { colors, radii, spacing } from '@/constants/tokens';
 
 type AuthMode = 'sign_in' | 'sign_up';
 
 export function AuthScreen() {
-  const router = useRouter();
-  const plan = usePlanStore((s) => s.plan);
   const [mode, setMode] = useState<AuthMode>('sign_in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,14 +24,10 @@ export function AuthScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const resetMessages = useCallback(() => {
+  const resetMessages = () => {
     setError(null);
     setInfo(null);
-  }, []);
-
-  const navigateAfterAuth = useCallback(() => {
-    router.replace(plan ? '/(app)/(tabs)' : '/(app)/onboarding');
-  }, [plan, router]);
+  };
 
   const handleEmailAuth = async () => {
     resetMessages();
@@ -44,13 +36,10 @@ export function AuthScreen() {
     try {
       if (mode === 'sign_in') {
         await signInWithEmail(email.trim(), password);
-        navigateAfterAuth();
       } else {
         const session = await signUpWithEmail(email.trim(), password);
         if (!session) {
           setInfo('Check your email to confirm your account, then sign in.');
-        } else {
-          navigateAfterAuth();
         }
       }
     } catch (err) {
@@ -69,7 +58,6 @@ export function AuthScreen() {
 
     try {
       await signInWithGoogle();
-      navigateAfterAuth();
     } catch (err) {
       const authError = toAuthError(err);
       if (authError.code !== 'AUTH_CANCELLED') {

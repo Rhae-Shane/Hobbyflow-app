@@ -8,12 +8,16 @@ import type { OnboardingProfile, Plan, Technique, TechniqueStatus } from '@/type
 
 const log = createLogger('plan-store');
 
+export type CloudHydrationStatus = 'idle' | 'loading' | 'done';
+
 type PlanState = {
   plan: Plan | null;
   profile: OnboardingProfile | null;
   streakDays: number;
   interactionDates: string[];
   userId: string | null;
+  cloudHydrationStatus: CloudHydrationStatus;
+  setCloudHydrationStatus: (status: CloudHydrationStatus) => void;
   setUserId: (userId: string | null) => void;
   hydrateFromCloud: (payload: {
     plan: Plan | null;
@@ -84,6 +88,8 @@ export const usePlanStore = create<PlanState>()(
       streakDays: 0,
       interactionDates: [],
       userId: null,
+      cloudHydrationStatus: 'idle',
+      setCloudHydrationStatus: (cloudHydrationStatus) => set({ cloudHydrationStatus }),
       setUserId: (userId) => set({ userId }),
       hydrateFromCloud: ({ plan, profile, streakDays, updatedAt }) =>
         set((state) => {
@@ -109,7 +115,14 @@ export const usePlanStore = create<PlanState>()(
           };
         }),
       clearSession: () =>
-        set({ plan: null, profile: null, streakDays: 0, interactionDates: [], userId: null }),
+        set({
+          plan: null,
+          profile: null,
+          streakDays: 0,
+          interactionDates: [],
+          userId: null,
+          cloudHydrationStatus: 'idle',
+        }),
       recordInteraction: () =>
         set((state) => {
           const next = withRecordedInteraction(state.interactionDates);
@@ -177,6 +190,13 @@ export const usePlanStore = create<PlanState>()(
     {
       name: 'hobbyflow-plan',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        plan: state.plan,
+        profile: state.profile,
+        streakDays: state.streakDays,
+        interactionDates: state.interactionDates,
+        userId: state.userId,
+      }),
     },
   ),
 );

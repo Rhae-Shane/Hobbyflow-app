@@ -7,15 +7,18 @@ const log = createLogger('hydrate');
 
 export function useHydrateUserPlan(userId: string | undefined, isAuthenticated: boolean) {
   const hydrateFromCloud = usePlanStore((s) => s.hydrateFromCloud);
+  const setCloudHydrationStatus = usePlanStore((s) => s.setCloudHydrationStatus);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
+      setCloudHydrationStatus('idle');
       return;
     }
 
     let cancelled = false;
 
     log.debug('Hydrating plan from cloud', { userId });
+    setCloudHydrationStatus('loading');
 
     fetchUserPlan(userId)
       .then((row) => {
@@ -44,10 +47,15 @@ export function useHydrateUserPlan(userId: string | undefined, isAuthenticated: 
           userId,
           error: err instanceof Error ? err.message : 'Unknown error',
         });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCloudHydrationStatus('done');
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [hydrateFromCloud, isAuthenticated, userId]);
+  }, [hydrateFromCloud, isAuthenticated, setCloudHydrationStatus, userId]);
 }

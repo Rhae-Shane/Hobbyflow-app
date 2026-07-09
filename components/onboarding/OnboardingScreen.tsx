@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -40,9 +40,16 @@ const GENERATION_ERROR_MESSAGE = "Couldn't generate your roadmap.";
 
 export function OnboardingScreen() {
   const router = useRouter();
+  const plan = usePlanStore((s) => s.plan);
   const setPlan = usePlanStore((s) => s.setPlan);
   const setProfile = usePlanStore((s) => s.setProfile);
   const generatePlan = useGeneratePlan();
+
+  useEffect(() => {
+    if (plan) {
+      router.replace('/(app)/(tabs)');
+    }
+  }, [plan, router]);
 
   const [hobby, setHobby] = useState('');
   const [level, setLevel] = useState<Plan['level']>('beginner');

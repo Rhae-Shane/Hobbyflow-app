@@ -8,16 +8,19 @@ import { colors } from '@/constants/tokens';
 export default function TabsLayout() {
   const router = useRouter();
   const plan = usePlanStore((s) => s.plan);
+  const cloudHydrationStatus = usePlanStore((s) => s.cloudHydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
+  const waitingForCloudPlan = !plan && cloudHydrationStatus === 'loading';
+
   useEffect(() => {
-    if (!storeHydrated) return;
+    if (!storeHydrated || waitingForCloudPlan) return;
     if (!plan) {
       router.replace('/(app)/onboarding');
     }
-  }, [plan, router, storeHydrated]);
+  }, [plan, router, storeHydrated, waitingForCloudPlan]);
 
-  if (!storeHydrated || !plan) {
+  if (!storeHydrated || waitingForCloudPlan || !plan) {
     return <BootSpinner />;
   }
 

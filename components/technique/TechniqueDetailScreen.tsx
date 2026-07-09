@@ -4,10 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { InlineError } from '@/components/ui/InlineError';
+import { InAppResourceViewer } from '@/components/technique/InAppResourceViewer';
 import { ReplaceTechniqueSheet } from '@/components/technique/ReplaceTechniqueSheet';
 import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { useReplaceTechnique } from '@/services/queries';
 import { usePlanStore } from '@/store/usePlanStore';
+import {
+  shouldOpenResourceInApp,
+  toInAppYouTubeUrl,
+} from '@/utils/resourceNavigation';
 import { buildResourceUrl } from '@/utils/resourceUrlBuilder';
 import type { Modality } from '@/types/plan.types';
 import { colors, radii, spacing } from '@/constants/tokens';
@@ -30,6 +35,7 @@ export function TechniqueDetailScreen() {
   const [actionsVisible, setActionsVisible] = useState(false);
   const [replaceVisible, setReplaceVisible] = useState(false);
   const [resourceError, setResourceError] = useState<string | null>(null);
+  const [resourceViewerUrl, setResourceViewerUrl] = useState<string | null>(null);
 
   const technique = plan?.techniques.find((t) => t.id === techniqueId);
 
@@ -37,6 +43,12 @@ export function TechniqueDetailScreen() {
     if (!technique || !plan) return;
     setResourceError(null);
     const url = buildResourceUrl(technique.modality, technique.searchQuery, plan.hobby);
+
+    if (shouldOpenResourceInApp(technique.modality)) {
+      setResourceViewerUrl(toInAppYouTubeUrl(url));
+      return;
+    }
+
     try {
       await WebBrowser.openBrowserAsync(url);
     } catch {
@@ -182,6 +194,13 @@ export function TechniqueDetailScreen() {
           onRetry={runReplace}
         />
       </BottomSheetOrModal>
+
+      <InAppResourceViewer
+        visible={resourceViewerUrl !== null}
+        url={resourceViewerUrl ?? ''}
+        title={technique.name}
+        onClose={() => setResourceViewerUrl(null)}
+      />
     </View>
   );
 }

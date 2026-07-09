@@ -7,9 +7,12 @@ import { usePlanStore } from '@/store/usePlanStore';
 export default function Index() {
   const { user, isLoading: authLoading } = useAuth();
   const plan = usePlanStore((s) => s.plan);
+  const cloudHydrationStatus = usePlanStore((s) => s.cloudHydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
-  if (authLoading || !storeHydrated) {
+  const waitingForCloudPlan = Boolean(user && !plan && cloudHydrationStatus === 'loading');
+
+  if (authLoading || !storeHydrated || waitingForCloudPlan) {
     return <BootSpinner />;
   }
 
