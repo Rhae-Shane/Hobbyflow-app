@@ -19,6 +19,7 @@ export function useHydrateUserPlan(userId: string | undefined, isAuthenticated: 
           plan: row.plan,
           profile: row.profile,
           streakDays: row.streak_days,
+          updatedAt: row.updated_at,
         });
       })
       .catch(() => {
