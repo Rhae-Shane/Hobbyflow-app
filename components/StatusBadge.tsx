@@ -9,14 +9,35 @@ const LABELS: Record<TechniqueStatus, string> = {
   skipped: 'Skipped',
 };
 
+const STATUS_STYLES: Record<TechniqueStatus, { badge: object; text: object }> = {
+  todo: {
+    badge: { backgroundColor: colors.border },
+    text: { color: colors.textMuted },
+  },
+  in_progress: {
+    badge: { backgroundColor: '#EEF2FF' },
+    text: { color: colors.primary },
+  },
+  mastered: {
+    badge: { backgroundColor: '#D1FAE5' },
+    text: { color: colors.success },
+  },
+  skipped: {
+    badge: { backgroundColor: '#F3F4F6' },
+    text: { color: colors.skipped },
+  },
+};
+
 type Props = {
   status: TechniqueStatus;
 };
 
 export function StatusBadge({ status }: Props) {
+  const statusStyle = STATUS_STYLES[status];
+
   return (
-    <View style={[styles.badge, status === 'skipped' && styles.skipped]}>
-      <Text style={styles.text}>{LABELS[status]}</Text>
+    <View style={[styles.badge, statusStyle.badge]}>
+      <Text style={[styles.text, statusStyle.text]}>{LABELS[status]}</Text>
     </View>
   );
 }
@@ -24,16 +45,11 @@ export function StatusBadge({ status }: Props) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.border,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  skipped: {
-    backgroundColor: '#F3F4F6',
-  },
   text: {
-    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
