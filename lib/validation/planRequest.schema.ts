@@ -8,6 +8,8 @@ export const planRequestSchema = z.object({
   level: levelSchema,
   goal: z.string().trim().optional().default(''),
   timeBudget: timeBudgetSchema,
+  /** Pre-rendered learner profile from onboarding preferences for AI personalization. */
+  learnerContext: z.string().trim().max(8000).optional(),
 });
 
 export type PlanRequestInput = z.infer<typeof planRequestSchema>;

@@ -1,3 +1,4 @@
+import { normalizeAccessibilitySelection } from '@/constants/preferences';
 import { MultiSelectChips } from '@/components/onboarding/MultiSelectChips';
 import { OtherInput } from '@/components/onboarding/OtherInput';
 import type { PreferenceDataKey, WizardStep } from '@/lib/preferencesWizardSteps';
@@ -29,6 +30,9 @@ export function PreferenceDataStep({
         minSelection={step.minSelection}
         options={getOptionsForDataKey(dataKey)}
         selected={selected}
+        resolveSelection={
+          dataKey === 'accessibilityNeeds' ? normalizeAccessibilitySelection : undefined
+        }
         onChange={(value) => onSelectionChange(dataKey, value)}
       />
       <OtherInput

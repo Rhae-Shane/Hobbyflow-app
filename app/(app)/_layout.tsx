@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useGlobalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { BootSpinner } from '@/components/BootSpinner';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,8 @@ function isOnboardingFlowSegment(segments: string[]): boolean {
 export default function AppLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const { mode } = useGlobalSearchParams<{ mode?: string }>();
+  const isAddHobbyMode = mode === 'add';
   const { user, isLoading } = useAuth();
   const isUserHydrated = useIsUserHydrated();
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
@@ -26,10 +28,14 @@ export default function AppLayout() {
   useEffect(() => {
     if (!user || !isUserHydrated) return;
 
-    if (hasCompletedOnboarding(completedOnboardingAt) && isOnboardingFlowSegment(segments)) {
+    if (
+      hasCompletedOnboarding(completedOnboardingAt) &&
+      isOnboardingFlowSegment(segments) &&
+      !isAddHobbyMode
+    ) {
       router.replace('/(app)/(tabs)');
     }
-  }, [completedOnboardingAt, isUserHydrated, router, segments, user]);
+  }, [completedOnboardingAt, isAddHobbyMode, isUserHydrated, router, segments, user]);
 
   if (isLoading || !user) {
     return <BootSpinner />;

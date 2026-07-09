@@ -12,12 +12,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { InlineError } from '@/components/ui/InlineError';
 import { BootSpinner } from '@/components/BootSpinner';
 import { getStarterPlan } from '@/lib/starterPlans';
+import { buildPlanRequestWithContext } from '@/lib/planRequestWithContext';
 import { planRequestSchema } from '@/lib/validation/planRequest.schema';
 import { useGeneratePlan } from '@/services/queries';
+import { fetchUserPreferences } from '@/services/preferences';
 import { completeOnboarding as markOnboardingComplete } from '@/services/user';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsUserHydrated } from '@/hooks/useIsUserHydrated';
 import { usePlanStore } from '@/store/usePlanStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 import { colors, radii, spacing } from '@/constants/tokens';
 import type { OnboardingProfile, Plan } from '@/types/plan.types';
@@ -56,6 +59,8 @@ export function OnboardingScreen() {
   const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
   const isUserHydrated = useIsUserHydrated();
   const generatePlan = useGeneratePlan();
+  const preferences = usePreferencesStore((s) => s.preferences);
+  const setPreferences = usePreferencesStore((s) => s.setPreferences);
 
   useEffect(() => {
     if (!isUserHydrated || isAddMode) return;
@@ -120,11 +125,22 @@ export function OnboardingScreen() {
     router.replace('/(app)/(tabs)');
   };
 
+  const resolvePreferencesForPlan = async () => {
+    if (preferences) return preferences;
+    if (!user) return null;
+    const fetched = await fetchUserPreferences(user.id);
+    if (fetched) setPreferences(fetched);
+    return fetched;
+  };
+
   const handleContinue = async () => {
     setValidationError(null);
     setGenerationFailed(false);
 
-    const parsed = planRequestSchema.safeParse({ hobby, level, goal, timeBudget });
+    const prefsForPlan = await resolvePreferencesForPlan();
+    const parsed = planRequestSchema.safeParse(
+      buildPlanRequestWithContext({ hobby, level, goal, timeBudget }, prefsForPlan),
+    );
     if (!parsed.success) {
       setValidationError(parsed.error.issues[0]?.message ?? 'Please complete the form');
       return;
@@ -164,7 +180,10 @@ export function OnboardingScreen() {
   const handleUseStarterPlan = async () => {
     let payload = lastRequestRef.current;
     if (!payload) {
-      const parsed = planRequestSchema.safeParse({ hobby, level, goal, timeBudget });
+      const prefsForPlan = await resolvePreferencesForPlan();
+      const parsed = planRequestSchema.safeParse(
+        buildPlanRequestWithContext({ hobby, level, goal, timeBudget }, prefsForPlan),
+      );
       if (!parsed.success) {
         setValidationError(parsed.error.issues[0]?.message ?? 'Please complete the form first');
         return;

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { getMotivationStats } from '@/lib/onboardingMotivation';
 import {
   EMPTY_PREFERENCES,
   getPreferencesResumeStepIndex,
+  isPresetSingleValue,
   WIZARD_STEPS,
   type PreferenceDataKey,
+  type PreferenceSingleKey,
   type WizardStep,
 } from '@/lib/preferencesWizardSteps';
 import { userPreferencesSchema } from '@/lib/validation/preferences.schema';
@@ -24,6 +25,24 @@ const VALIDATION_MESSAGES = {
   incomplete: 'Please complete all preference steps.',
 } as const;
 
+function resolveSingleValue(
+  singleKey: PreferenceSingleKey,
+  draft: UserPreferences,
+  otherText: string,
+): string {
+  const trimmedOther = otherText.trim();
+  if (trimmedOther) return trimmedOther;
+
+  const current = draft[singleKey]?.trim() ?? '';
+  if (!current) return '';
+
+  if (singleKey === 'userRole' && !isPresetSingleValue(singleKey, current)) {
+    return current;
+  }
+
+  return current;
+}
+
 export function usePreferencesWizard() {
   const router = useRouter();
   const { user } = useAuth();
@@ -39,7 +58,6 @@ export function usePreferencesWizard() {
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  // Always honor cloud onboarding status — even after the wizard has initialized.
   useEffect(() => {
     if (!isUserHydrated) return;
     if (hasCompletedOnboarding(completedOnboardingAt)) {
@@ -50,31 +68,22 @@ export function usePreferencesWizard() {
   useEffect(() => {
     if (!isUserHydrated || initialized) return;
     if (hasCompletedOnboarding(completedOnboardingAt)) return;
-    if (storedPreferences && hasCompletedPreferences(storedPreferences)) {
+
+    const base = storedPreferences ?? EMPTY_PREFERENCES;
+    setDraft(base);
+
+    if (hasCompletedPreferences(storedPreferences)) {
+      setInitialized(true);
       router.replace('/(app)/onboarding');
       return;
     }
-    const base = storedPreferences ?? EMPTY_PREFERENCES;
-    setDraft(base);
+
     setStepIndex(getPreferencesResumeStepIndex(storedPreferences));
     setInitialized(true);
   }, [completedOnboardingAt, initialized, isUserHydrated, router, storedPreferences]);
 
   const step = WIZARD_STEPS[stepIndex];
   const isLastStep = stepIndex === WIZARD_STEPS.length - 1;
-
-  const motivation = useMemo(
-    () => getMotivationStats(draft.dailyGoal || '10'),
-    [draft.dailyGoal],
-  );
-
-  const motivationTitle = `That's more than ${motivation.booksPerMonth} book${motivation.booksPerMonth === 1 ? '' : 's'} of solid learning every month`;
-  const motivationSubtitle = `${motivation.lessonsFirstWeek} lessons in your first week. You're on your way to building a lasting learning habit!`;
-
-  const displayTitle =
-    step?.id === 'interstitial-motivation' ? motivationTitle : (step?.title ?? '');
-  const displaySubtitle =
-    step?.id === 'interstitial-motivation' ? motivationSubtitle : step?.subtitle;
 
   const getSelection = useCallback(
     (dataKey: PreferenceDataKey): string[] => draft[dataKey],
@@ -85,8 +94,9 @@ export function usePreferencesWizard() {
     setDraft((current) => ({ ...current, [dataKey]: value }));
   }, []);
 
-  const setDailyGoal = useCallback((dailyGoal: string) => {
-    setDraft((current) => ({ ...current, dailyGoal }));
+  const setSingleField = useCallback((singleKey: PreferenceSingleKey, value: string) => {
+    setOtherText('');
+    setDraft((current) => ({ ...current, [singleKey]: value }));
   }, []);
 
   const mergeOtherIntoDraft = useCallback(
@@ -97,13 +107,26 @@ export function usePreferencesWizard() {
     [draft, getSelection, otherText],
   );
 
+  const mergeSingleIntoDraft = useCallback(
+    (singleKey: PreferenceSingleKey): UserPreferences => {
+      const value = resolveSingleValue(singleKey, draft, otherText);
+      return { ...draft, [singleKey]: value };
+    },
+    [draft, otherText],
+  );
+
   const canContinue = useCallback((): boolean => {
     if (!step) return false;
     if (step.kind === 'interstitial' || step.kind === 'summary') return true;
-    if (step.kind === 'daily') return Boolean(draft.dailyGoal);
+
+    if (step.kind === 'single' && step.singleKey) {
+      const resolved = resolveSingleValue(step.singleKey, draft, otherText);
+      return resolved.trim().length > 0;
+    }
+
     if (!step.dataKey) return false;
     return getSelection(step.dataKey).length >= (step.minSelection ?? 1);
-  }, [draft.dailyGoal, getSelection, step]);
+  }, [draft, getSelection, otherText, step]);
 
   const persistDraft = async (nextDraft: UserPreferences) => {
     if (!user) {
@@ -144,8 +167,16 @@ export function usePreferencesWizard() {
       setOtherText('');
     }
 
+    if (step.kind === 'single' && step.singleKey) {
+      nextDraft = mergeSingleIntoDraft(step.singleKey);
+      setDraft(nextDraft);
+      setOtherText('');
+    }
+
     const shouldSave =
-      step.kind === 'data' || step.kind === 'daily' || (isLastStep && step.kind === 'interstitial');
+      step.kind === 'data' ||
+      step.kind === 'single' ||
+      (isLastStep && step.kind === 'interstitial');
 
     if (shouldSave) {
       setIsSaving(true);
@@ -188,15 +219,15 @@ export function usePreferencesWizard() {
     validationError,
     isSaving,
     initialized: initialized && isUserHydrated,
-    displayTitle,
-    displaySubtitle,
+    displayTitle: step?.title ?? '',
+    displaySubtitle: step?.subtitle,
     canContinue,
     handleBack,
     handleContinue,
     handleAddOther,
     getSelection,
     setSelection,
-    setDailyGoal,
+    setSingleField,
   };
 }
 

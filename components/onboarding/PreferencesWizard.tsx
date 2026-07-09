@@ -6,12 +6,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { DailyGoalPicker } from '@/components/onboarding/DailyGoalPicker';
 import { NotedSummaryStep } from '@/components/onboarding/NotedSummaryStep';
+import { OtherInput } from '@/components/onboarding/OtherInput';
 import { PreferenceDataStep } from '@/components/onboarding/PreferenceDataStep';
+import { SingleSelectList } from '@/components/onboarding/SingleSelectList';
 import { InlineError } from '@/components/ui/InlineError';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
+import { getOptionsForSingleKey, isPresetSingleValue } from '@/lib/preferencesWizardSteps';
 import { usePreferencesWizard } from '@/hooks/usePreferencesWizard';
 
 export function PreferencesWizard() {
@@ -32,7 +34,7 @@ export function PreferencesWizard() {
     handleAddOther,
     getSelection,
     setSelection,
-    setDailyGoal,
+    setSingleField,
   } = usePreferencesWizard();
 
   if (!initialized || !step) {
@@ -64,12 +66,34 @@ export function PreferencesWizard() {
           />
         ) : null}
 
-        {step.kind === 'summary' ? (
-          <NotedSummaryStep selectedStyles={draft.learningStyles} />
+        {step.kind === 'single' && step.singleKey ? (
+          <>
+            <SingleSelectList
+              options={getOptionsForSingleKey(step.singleKey)}
+              selectedValue={
+                isPresetSingleValue(step.singleKey, draft[step.singleKey])
+                  ? draft[step.singleKey]
+                  : ''
+              }
+              onChange={(value) => setSingleField(step.singleKey!, value)}
+            />
+            {step.allowOther ? (
+              <OtherInput
+                placeholder={step.otherPlaceholder ?? 'Other (optional)'}
+                value={
+                  draft[step.singleKey] &&
+                  !isPresetSingleValue(step.singleKey, draft[step.singleKey])
+                    ? draft[step.singleKey]
+                    : otherText
+                }
+                onChange={setOtherText}
+              />
+            ) : null}
+          </>
         ) : null}
 
-        {step.kind === 'daily' ? (
-          <DailyGoalPicker selectedValue={draft.dailyGoal} onChange={setDailyGoal} />
+        {step.kind === 'summary' ? (
+          <NotedSummaryStep selectedStyles={draft.learningStyles} />
         ) : null}
 
         {step.kind === 'interstitial' && step.emoji ? (

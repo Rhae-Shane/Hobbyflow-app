@@ -10,6 +10,7 @@ type Props = {
   onChange: (selected: string[]) => void;
   minSelection?: number;
   layout?: ChipLayout;
+  resolveSelection?: (selected: string[], toggled: string) => string[];
 };
 
 export function MultiSelectChips({
@@ -18,8 +19,14 @@ export function MultiSelectChips({
   onChange,
   minSelection = 0,
   layout = 'wrap',
+  resolveSelection,
 }: Props) {
   const toggle = (option: string) => {
+    if (resolveSelection) {
+      onChange(resolveSelection(selected, option));
+      return;
+    }
+
     if (selected.includes(option)) {
       if (selected.length <= minSelection) return;
       onChange(selected.filter((item) => item !== option));

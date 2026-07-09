@@ -8,71 +8,75 @@ import { appendUniqueCustom, type UserPreferences } from '@/types/preferences.ty
 describe('getPreferencesResumeStepIndex', () => {
   const completePreferences: UserPreferences = {
     ...EMPTY_PREFERENCES,
-    userRoles: ['Developer/Engineer'],
-    topGoals: ['Build new skills'],
-    learningStyles: ['Bite-sized lessons'],
-    selectedTags: ['AI'],
-    dailyGoal: '10',
+    userRole: 'Working professional',
+    ageRange: '25–34',
+    topGoals: ['Pick up a brand-new hobby'],
+    accessibilityNeeds: ['None — no adjustments needed'],
+    learningStrengths: ['Learn well by doing'],
+    practiceEnvironments: ['At home only'],
+    resourceBudget: 'Low budget',
+    learningStyles: ['Video'],
   };
 
   it('returns 0 when preferences are null', () => {
     expect(getPreferencesResumeStepIndex(null)).toBe(0);
   });
 
-  it('returns roles step when userRoles is empty', () => {
+  it('returns roles step when userRole is empty', () => {
     expect(getPreferencesResumeStepIndex(EMPTY_PREFERENCES)).toBe(0);
   });
 
-  it('returns goals step when only roles are saved', () => {
-    const partial = { ...EMPTY_PREFERENCES, userRoles: ['Student'] };
+  it('returns age step when only role is saved', () => {
+    const partial = { ...EMPTY_PREFERENCES, userRole: 'Student' };
     expect(getPreferencesResumeStepIndex(partial)).toBe(1);
   });
 
-  it('returns learning-styles step when roles and goals are saved', () => {
+  it('returns goals step when role and age are saved', () => {
     const partial = {
       ...EMPTY_PREFERENCES,
-      userRoles: ['Student'],
-      topGoals: ['Just for fun'],
+      userRole: 'Student',
+      ageRange: '18–24',
     };
-    expect(getPreferencesResumeStepIndex(partial)).toBe(3);
+    expect(getPreferencesResumeStepIndex(partial)).toBe(2);
   });
 
-  it('returns topics step when learning styles are saved', () => {
+  it('returns accessibility step when role, age, and goals are saved', () => {
     const partial = {
       ...EMPTY_PREFERENCES,
-      userRoles: ['Student'],
-      topGoals: ['Just for fun'],
-      learningStyles: ['Visual explanations'],
+      userRole: 'Student',
+      ageRange: '18–24',
+      topGoals: ['Relax and de-stress'],
     };
-    expect(getPreferencesResumeStepIndex(partial)).toBe(5);
+    expect(getPreferencesResumeStepIndex(partial)).toBe(4);
   });
 
-  it('returns daily-goal step when all multi-select fields are saved', () => {
-    const partial = {
+  it('returns practice environment step when legacy profile only has old fields', () => {
+    const legacyPartial = {
       ...EMPTY_PREFERENCES,
-      userRoles: ['Student'],
-      topGoals: ['Just for fun'],
-      learningStyles: ['Visual explanations'],
-      selectedTags: ['Psychology'],
+      userRole: 'Student',
+      ageRange: '18–24',
+      topGoals: ['Relax and de-stress'],
+      accessibilityNeeds: ['None — no adjustments needed'],
+      learningStyles: ['Video'],
     };
-    expect(getPreferencesResumeStepIndex(partial)).toBe(8);
+    expect(getPreferencesResumeStepIndex(legacyPartial)).toBe(6);
   });
 
-  it('returns last step when all fields are complete', () => {
+  it('returns last step when all required fields are saved', () => {
     expect(getPreferencesResumeStepIndex(completePreferences)).toBe(WIZARD_STEPS.length - 1);
   });
 });
 
 describe('appendUniqueCustom', () => {
   it('appends trimmed custom value when not a duplicate', () => {
-    expect(appendUniqueCustom(['AI'], '  Chess  ')).toEqual(['AI', 'Chess']);
+    expect(appendUniqueCustom(['Video'], '  Audio  ')).toEqual(['Video', 'Audio']);
   });
 
   it('ignores case-insensitive duplicates', () => {
-    expect(appendUniqueCustom(['AI'], 'ai')).toEqual(['AI']);
+    expect(appendUniqueCustom(['Video'], 'video')).toEqual(['Video']);
   });
 
   it('returns original array for blank input', () => {
-    expect(appendUniqueCustom(['AI'], '   ')).toEqual(['AI']);
+    expect(appendUniqueCustom(['Video'], '   ')).toEqual(['Video']);
   });
 });

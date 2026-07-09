@@ -1,20 +1,30 @@
 import { createLogger } from '@/lib/logger';
 import { AppError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
-import type { UserPreferences, UserPreferencesRow } from '@/types/preferences.types';
+import {
+  normalizeUserRole,
+  type UserPreferences,
+  type UserPreferencesRow,
+} from '@/types/preferences.types';
 
 const log = createLogger('preferences');
 
 const PREFERENCES_COLUMNS =
-  'user_id, top_goals, selected_tags, user_roles, learning_styles, daily_goal, content_language, created_at, updated_at';
+  'user_id, top_goals, user_roles, age_range, accessibility_needs, learning_strengths, practice_environments, resource_budget, learning_styles, content_language, created_at, updated_at';
+
+const LEGACY_PREFERENCES_COLUMNS =
+  'user_id, top_goals, user_roles, learning_styles, content_language, created_at, updated_at';
 
 export function rowToUserPreferences(row: UserPreferencesRow): UserPreferences {
   return {
     topGoals: row.top_goals ?? [],
-    selectedTags: row.selected_tags ?? [],
-    userRoles: row.user_roles ?? [],
+    userRole: normalizeUserRole(row.user_roles),
+    ageRange: row.age_range ?? '',
+    accessibilityNeeds: row.accessibility_needs ?? [],
+    learningStrengths: row.learning_strengths ?? [],
+    practiceEnvironments: row.practice_environments ?? [],
+    resourceBudget: row.resource_budget ?? '',
     learningStyles: row.learning_styles ?? [],
-    dailyGoal: row.daily_goal ?? '',
     contentLanguage: row.content_language ?? 'en',
   };
 }
@@ -26,33 +36,66 @@ export function userPreferencesToRow(
   return {
     user_id: userId,
     top_goals: preferences.topGoals,
-    selected_tags: preferences.selectedTags,
-    user_roles: preferences.userRoles,
+    user_roles: preferences.userRole.trim() ? [preferences.userRole.trim()] : [],
+    age_range: preferences.ageRange,
+    accessibility_needs: preferences.accessibilityNeeds,
+    learning_strengths: preferences.learningStrengths,
+    practice_environments: preferences.practiceEnvironments,
+    resource_budget: preferences.resourceBudget,
     learning_styles: preferences.learningStyles,
-    daily_goal: preferences.dailyGoal,
     content_language: preferences.contentLanguage,
   };
 }
 
-export async function fetchUserPreferences(userId: string): Promise<UserPreferences | null> {
+async function fetchPreferencesRow(
+  userId: string,
+  columns: string,
+): Promise<UserPreferencesRow | null> {
   const { data, error } = await supabase
     .from('user_preferences')
-    .select(PREFERENCES_COLUMNS)
+    .select(columns)
     .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {
-    log.error('Failed to fetch preferences', { userId, error: error.message });
-    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
-      cause: error,
+    throw error;
+  }
+
+  return (data as UserPreferencesRow | null) ?? null;
+}
+
+export async function fetchUserPreferences(userId: string): Promise<UserPreferences | null> {
+  try {
+    const row = await fetchPreferencesRow(userId, PREFERENCES_COLUMNS);
+    if (!row) return null;
+    return rowToUserPreferences(row);
+  } catch (error) {
+    log.warn('Full preferences fetch failed, trying legacy columns', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
-  }
 
-  if (!data) {
-    return null;
+    try {
+      const legacyRow = await fetchPreferencesRow(userId, LEGACY_PREFERENCES_COLUMNS);
+      if (!legacyRow) return null;
+      return rowToUserPreferences({
+        ...legacyRow,
+        age_range: '',
+        accessibility_needs: [],
+        learning_strengths: [],
+        practice_environments: [],
+        resource_budget: '',
+      });
+    } catch (legacyError) {
+      log.error('Failed to fetch preferences', {
+        userId,
+        error: legacyError instanceof Error ? legacyError.message : 'Unknown error',
+      });
+      throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
+        cause: legacyError,
+      });
+    }
   }
-
-  return rowToUserPreferences(data as UserPreferencesRow);
 }
 
 export async function saveUserPreferences(
@@ -62,10 +105,13 @@ export async function saveUserPreferences(
   log.debug('Saving user preferences', {
     userId,
     topGoals: preferences.topGoals.length,
-    selectedTags: preferences.selectedTags.length,
-    userRoles: preferences.userRoles.length,
+    userRole: preferences.userRole,
+    ageRange: preferences.ageRange,
+    accessibilityNeeds: preferences.accessibilityNeeds.length,
+    practiceEnvironments: preferences.practiceEnvironments.length,
+    resourceBudget: preferences.resourceBudget,
+    learningStrengths: preferences.learningStrengths.length,
     learningStyles: preferences.learningStyles.length,
-    dailyGoal: preferences.dailyGoal,
   });
 
   const { error } = await supabase
