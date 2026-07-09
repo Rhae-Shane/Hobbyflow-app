@@ -1,6 +1,14 @@
-import { getAccessToken } from '@/lib/auth';
+import { Alert } from 'react-native';
+import { getAccessToken, signOut } from '@/lib/auth';
+import { usePlanStore } from '@/store/usePlanStore';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+async function handleUnauthorized() {
+  await signOut();
+  usePlanStore.getState().clearSession();
+  Alert.alert('Session expired', 'Please sign in again.');
+}
 
 type RequestOptions = {
   method?: 'GET' | 'POST';
@@ -25,6 +33,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   });
 
   const data = await response.json();
+
+  if (response.status === 401) {
+    await handleUnauthorized();
+    throw new Error('Session expired');
+  }
 
   if (!response.ok) {
     throw new Error(data?.error ?? `Request failed (${response.status})`);
