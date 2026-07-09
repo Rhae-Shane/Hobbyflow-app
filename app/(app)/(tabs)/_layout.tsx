@@ -24,6 +24,7 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (!storeHydrated || waitingForCloud || waitingForUser) return;
+    if (hasCompletedOnboarding(completedOnboardingAt)) return;
 
     const route = getPostAuthRoute({
       completedOnboardingAt,

@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { InlineError } from '@/components/ui/InlineError';
+import { BootSpinner } from '@/components/BootSpinner';
 import { getStarterPlan } from '@/lib/starterPlans';
 import { planRequestSchema } from '@/lib/validation/planRequest.schema';
 import { useGeneratePlan } from '@/services/queries';
 import { completeOnboarding as markOnboardingComplete } from '@/services/user';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsUserHydrated } from '@/hooks/useIsUserHydrated';
 import { usePlanStore } from '@/store/usePlanStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 import { colors, radii, spacing } from '@/constants/tokens';
@@ -52,16 +54,18 @@ export function OnboardingScreen() {
   const setProfile = usePlanStore((s) => s.setProfile);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
   const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
+  const isUserHydrated = useIsUserHydrated();
   const generatePlan = useGeneratePlan();
 
   useEffect(() => {
-    if (!isAddMode && hasCompletedOnboarding(completedOnboardingAt)) {
+    if (!isUserHydrated || isAddMode) return;
+    if (hasCompletedOnboarding(completedOnboardingAt)) {
       router.replace('/(app)/(tabs)');
     }
-  }, [completedOnboardingAt, isAddMode, router]);
+  }, [completedOnboardingAt, isAddMode, isUserHydrated, router]);
 
   useEffect(() => {
-    if (isAddMode || !user || hasCompletedOnboarding(completedOnboardingAt)) return;
+    if (!isUserHydrated || isAddMode || !user || hasCompletedOnboarding(completedOnboardingAt)) return;
     if (hobbies.length === 0) return;
 
     let cancelled = false;
@@ -82,6 +86,7 @@ export function OnboardingScreen() {
     completedOnboardingAt,
     hobbies.length,
     isAddMode,
+    isUserHydrated,
     router,
     setCompletedOnboardingAt,
     user,
@@ -184,6 +189,10 @@ export function OnboardingScreen() {
   };
 
   const starterAvailable = Boolean(getStarterPlan({ hobby, level, goal }));
+
+  if (!isAddMode && !isUserHydrated) {
+    return <BootSpinner />;
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">

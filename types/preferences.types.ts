@@ -31,17 +31,6 @@ export function hasCompletedPreferences(preferences: UserPreferences | null | un
   );
 }
 
-/** First wizard data step to resume from partial cloud save (skips interstitials). */
-export function getPreferencesResumeStepIndex(preferences: UserPreferences | null): number {
-  if (!preferences) return 0;
-  if (preferences.userRoles.length === 0) return 0;
-  if (preferences.topGoals.length === 0) return 1;
-  if (preferences.learningStyles.length === 0) return 3;
-  if (preferences.selectedTags.length === 0) return 5;
-  if (!preferences.dailyGoal) return 8;
-  return 9;
-}
-
 export function appendUniqueCustom(values: string[], custom: string): string[] {
   const trimmed = custom.trim();
   if (!trimmed) return values;
