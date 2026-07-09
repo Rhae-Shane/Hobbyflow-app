@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Link, useRouter } from 'expo-router';
 import { StreakBadge } from '@/components/progress/StreakBadge';
+import { HobbySwitcher } from '@/components/hobbies/HobbySwitcher';
 import { TechniqueCard } from '@/components/roadmap/TechniqueCard';
 import { TodaysFocusBanner } from '@/components/roadmap/TodaysFocusBanner';
 import { colors, radii, spacing } from '@/constants/tokens';
@@ -26,6 +27,8 @@ function TechniqueCardSkeleton() {
 export function RoadmapScreen() {
   const router = useRouter();
   const plan = usePlanStore((s) => s.plan);
+  const hobbies = usePlanStore((s) => s.hobbies);
+  const activeHobbyId = usePlanStore((s) => s.activeHobbyId);
   const streakDays = usePlanStore((s) => s.streakDays);
   const [showSkeleton, setShowSkeleton] = useState(true);
 
@@ -51,12 +54,18 @@ export function RoadmapScreen() {
   }, [plan?.planId]);
 
   if (!plan) {
+    const activeHobby = hobbies.find((h) => h.id === activeHobbyId);
     return (
       <View style={styles.container}>
+        <HobbySwitcher />
         <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No roadmap yet — </Text>
-          <Link href="/(app)/onboarding">
-            <Text style={styles.emptyLink}>choose a hobby to begin.</Text>
+          <Text style={styles.emptyText}>
+            {activeHobby
+              ? `No roadmap for ${activeHobby.name} yet — `
+              : 'No roadmap yet — '}
+          </Text>
+          <Link href="/(app)/onboarding?mode=add">
+            <Text style={styles.emptyLink}>generate one.</Text>
           </Link>
         </View>
       </View>
@@ -73,7 +82,7 @@ export function RoadmapScreen() {
   const listHeader = (
     <View style={styles.header}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{plan.hobby}</Text>
+        <HobbySwitcher compact />
         <StreakBadge days={streakDays} />
       </View>
       <Text style={styles.progress}>
@@ -105,7 +114,6 @@ export function RoadmapScreen() {
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        estimatedItemSize={110}
       />
     </View>
   );

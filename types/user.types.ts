@@ -9,13 +9,28 @@ export type AppUser = {
   lastSignInAt: string | null;
 };
 
-export type ProfileRow = {
+export type UserRow = {
   id: string;
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
   provider: string | null;
   email_verified: boolean;
+  completed_onboarding_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** @deprecated Use UserRow — table renamed from profiles to users */
+export type ProfileRow = UserRow;
+
+export type HobbyRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  goal: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };

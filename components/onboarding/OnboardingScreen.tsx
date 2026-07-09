@@ -8,12 +8,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { InlineError } from '@/components/ui/InlineError';
 import { getStarterPlan } from '@/lib/starterPlans';
 import { planRequestSchema } from '@/lib/validation/planRequest.schema';
 import { useGeneratePlan } from '@/services/queries';
+import { completeOnboarding as markOnboardingComplete } from '@/services/user';
+import { useAuth } from '@/hooks/useAuth';
 import { usePlanStore } from '@/store/usePlanStore';
+import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 import { colors, radii, spacing } from '@/constants/tokens';
 import type { OnboardingProfile, Plan } from '@/types/plan.types';
 import { HobbyPicker } from '@/components/onboarding/HobbyPicker';
@@ -40,16 +43,49 @@ const GENERATION_ERROR_MESSAGE = "Couldn't generate your roadmap.";
 
 export function OnboardingScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isAddMode = mode === 'add';
   const plan = usePlanStore((s) => s.plan);
+  const hobbies = usePlanStore((s) => s.hobbies);
   const setPlan = usePlanStore((s) => s.setPlan);
   const setProfile = usePlanStore((s) => s.setProfile);
+  const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
   const generatePlan = useGeneratePlan();
 
   useEffect(() => {
-    if (plan) {
+    if (!isAddMode && hasCompletedOnboarding(completedOnboardingAt)) {
       router.replace('/(app)/(tabs)');
     }
-  }, [plan, router]);
+  }, [completedOnboardingAt, isAddMode, router]);
+
+  useEffect(() => {
+    if (isAddMode || !user || hasCompletedOnboarding(completedOnboardingAt)) return;
+    if (hobbies.length === 0) return;
+
+    let cancelled = false;
+    markOnboardingComplete(user.id)
+      .then(() => {
+        if (cancelled) return;
+        setCompletedOnboardingAt(new Date().toISOString());
+        router.replace('/(app)/(tabs)');
+      })
+      .catch(() => {
+        // User can finish hobby form manually if backfill fails.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    completedOnboardingAt,
+    hobbies.length,
+    isAddMode,
+    router,
+    setCompletedOnboardingAt,
+    user,
+  ]);
 
   const [hobby, setHobby] = useState('');
   const [level, setLevel] = useState<Plan['level']>('beginner');
@@ -64,9 +100,18 @@ export function OnboardingScreen() {
 
   const isLoading = generatePlan.isPending;
 
-  const completeOnboarding = (plan: Plan, profile: OnboardingProfile) => {
-    setPlan(plan);
-    setProfile(profile);
+  const finishHobbySetup = async (nextPlan: Plan, nextProfile: OnboardingProfile) => {
+    if (isAddMode) {
+      usePlanStore.getState().saveCurrentHobbySnapshot();
+    }
+    setPlan(nextPlan);
+    setProfile(nextProfile);
+
+    if (!isAddMode && user) {
+      await markOnboardingComplete(user.id);
+      setCompletedOnboardingAt(new Date().toISOString());
+    }
+
     router.replace('/(app)/(tabs)');
   };
 
@@ -80,6 +125,16 @@ export function OnboardingScreen() {
       return;
     }
 
+    const duplicate = hobbies.find(
+      (h) => h.name.toLowerCase() === parsed.data.hobby.trim().toLowerCase(),
+    );
+    if (isAddMode && duplicate) {
+      setValidationError(
+        `You already have "${duplicate.name}". Switch to it from the Progress tab.`,
+      );
+      return;
+    }
+
     lastRequestRef.current = parsed.data;
 
     const interval = setInterval(() => {
@@ -88,7 +143,7 @@ export function OnboardingScreen() {
 
     try {
       const plan = await generatePlan.mutateAsync(parsed.data);
-      completeOnboarding(plan, {
+      await finishHobbySetup(plan, {
         hobby: parsed.data.hobby,
         level: parsed.data.level,
         goal: parsed.data.goal,
@@ -101,7 +156,7 @@ export function OnboardingScreen() {
     }
   };
 
-  const handleUseStarterPlan = () => {
+  const handleUseStarterPlan = async () => {
     let payload = lastRequestRef.current;
     if (!payload) {
       const parsed = planRequestSchema.safeParse({ hobby, level, goal, timeBudget });
@@ -120,7 +175,7 @@ export function OnboardingScreen() {
 
     setGenerationFailed(false);
     setValidationError(null);
-    completeOnboarding(starter, {
+    await finishHobbySetup(starter, {
       hobby: payload.hobby,
       level: payload.level,
       goal: payload.goal,
@@ -132,10 +187,14 @@ export function OnboardingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>HobbyFlow</Text>
-      <Text style={styles.subtitle}>Go with your hobby's flow.</Text>
+      <Text style={styles.title}>{isAddMode ? 'Add a hobby' : 'HobbyFlow'}</Text>
+      <Text style={styles.subtitle}>
+        {isAddMode
+          ? 'Set up a new learning roadmap for another hobby.'
+          : "Go with your hobby's flow."}
+      </Text>
 
-      <Text style={styles.label}>Choose a hobby to begin</Text>
+      <Text style={styles.label}>{isAddMode ? 'Choose a hobby' : 'Choose a hobby to begin'}</Text>
       {!hobby ? (
         <Text style={styles.emptyHint}>No roadmap yet — choose a hobby to begin.</Text>
       ) : null}

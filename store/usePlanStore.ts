@@ -3,14 +3,26 @@ import dayjs from 'dayjs';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { createLogger } from '@/lib/logger';
+import { fetchUserHobbies } from '@/services/hobbies';
 import { upsertUserPlan } from '@/services/userState';
 import type { OnboardingProfile, Plan, Technique, TechniqueStatus } from '@/types/plan.types';
+import type { HobbyRow } from '@/types/user.types';
 
 const log = createLogger('plan-store');
 
 export type CloudHydrationStatus = 'idle' | 'loading' | 'done';
 
+export type HobbyPlanSnapshot = {
+  plan: Plan | null;
+  profile: OnboardingProfile | null;
+  streakDays: number;
+  interactionDates: string[];
+};
+
 type PlanState = {
+  hobbies: HobbyRow[];
+  activeHobbyId: string | null;
+  hobbySnapshots: Record<string, HobbyPlanSnapshot>;
   plan: Plan | null;
   profile: OnboardingProfile | null;
   streakDays: number;
@@ -19,7 +31,12 @@ type PlanState = {
   cloudHydrationStatus: CloudHydrationStatus;
   setCloudHydrationStatus: (status: CloudHydrationStatus) => void;
   setUserId: (userId: string | null) => void;
+  setHobbies: (hobbies: HobbyRow[]) => void;
+  saveCurrentHobbySnapshot: () => void;
+  applyHobbySnapshot: (hobbyId: string, snapshot: HobbyPlanSnapshot) => void;
   hydrateFromCloud: (payload: {
+    hobbies: HobbyRow[];
+    activeHobbyId: string | null;
     plan: Plan | null;
     profile: OnboardingProfile | null;
     streakDays: number;
@@ -68,21 +85,37 @@ function withRecordedInteraction(dates: string[]): { interactionDates: string[];
   return { interactionDates, streakDays: computeStreakDays(interactionDates) };
 }
 
-function syncToCloud(getState: () => PlanState) {
+function syncToCloud(
+  getState: () => PlanState,
+  setState: (partial: Partial<PlanState> | ((state: PlanState) => Partial<PlanState>)) => void,
+) {
   const { userId, plan, profile, streakDays } = getState();
   if (!userId) return;
 
-  void upsertUserPlan(userId, { plan, profile, streakDays }).catch((err: unknown) => {
-    log.warn('Cloud sync failed — local state kept', {
-      userId,
-      error: err instanceof Error ? err.message : 'Unknown error',
+  void upsertUserPlan(userId, { plan, profile, streakDays })
+    .then(({ hobbyId }) =>
+      fetchUserHobbies(userId).then((hobbies) => {
+        const active = hobbies.find((h) => h.id === hobbyId) ?? hobbies.find((h) => h.is_active);
+        setState({
+          hobbies,
+          activeHobbyId: active?.id ?? hobbyId,
+        });
+      }),
+    )
+    .catch((err: unknown) => {
+      log.warn('Cloud sync failed — local state kept', {
+        userId,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
     });
-  });
 }
 
 export const usePlanStore = create<PlanState>()(
   persist(
     (set, get) => ({
+      hobbies: [],
+      activeHobbyId: null,
+      hobbySnapshots: {},
       plan: null,
       profile: null,
       streakDays: 0,
@@ -91,24 +124,51 @@ export const usePlanStore = create<PlanState>()(
       cloudHydrationStatus: 'idle',
       setCloudHydrationStatus: (cloudHydrationStatus) => set({ cloudHydrationStatus }),
       setUserId: (userId) => set({ userId }),
-      hydrateFromCloud: ({ plan, profile, streakDays, updatedAt }) =>
+      setHobbies: (hobbies) => {
+        const active = hobbies.find((h) => h.is_active) ?? hobbies[0] ?? null;
+        set({ hobbies, activeHobbyId: active?.id ?? null });
+      },
+      saveCurrentHobbySnapshot: () =>
         set((state) => {
-          // Conflict rule: when cloud and local persisted plan both exist, prefer the
-          // newer of cloud `updated_at` vs local plan `generatedAt` — never overwrite
-          // fresher local progress with a stale cloud row.
+          if (!state.activeHobbyId) return state;
+          return {
+            hobbySnapshots: {
+              ...state.hobbySnapshots,
+              [state.activeHobbyId]: {
+                plan: state.plan,
+                profile: state.profile,
+                streakDays: state.streakDays,
+                interactionDates: state.interactionDates,
+              },
+            },
+          };
+        }),
+      applyHobbySnapshot: (hobbyId, snapshot) =>
+        set((state) => ({
+          activeHobbyId: hobbyId,
+          hobbies: state.hobbies.map((h) => ({ ...h, is_active: h.id === hobbyId })),
+          plan: snapshot.plan,
+          profile: snapshot.profile,
+          streakDays: snapshot.streakDays,
+          interactionDates: snapshot.interactionDates,
+        })),
+      hydrateFromCloud: ({ hobbies, activeHobbyId, plan, profile, streakDays, updatedAt }) =>
+        set((state) => {
           const localPlan = state.plan;
-          if (localPlan && plan) {
+          if (localPlan && plan && state.activeHobbyId === activeHobbyId) {
             const cloudTime = new Date(updatedAt).getTime();
             const localTime = new Date(localPlan.generatedAt).getTime();
             if (localTime > cloudTime) {
-              queueMicrotask(() => syncToCloud(get));
-              return state;
+              queueMicrotask(() => syncToCloud(get, set));
+              return { hobbies, activeHobbyId: activeHobbyId ?? state.activeHobbyId };
             }
           }
 
           const computed = computeStreakDays(state.interactionDates);
 
           return {
+            hobbies,
+            activeHobbyId,
             plan: plan ?? state.plan,
             profile: profile ?? state.profile,
             streakDays: Math.max(streakDays ?? 0, computed, state.streakDays),
@@ -116,6 +176,9 @@ export const usePlanStore = create<PlanState>()(
         }),
       clearSession: () =>
         set({
+          hobbies: [],
+          activeHobbyId: null,
+          hobbySnapshots: {},
           plan: null,
           profile: null,
           streakDays: 0,
@@ -126,16 +189,16 @@ export const usePlanStore = create<PlanState>()(
       recordInteraction: () =>
         set((state) => {
           const next = withRecordedInteraction(state.interactionDates);
-          queueMicrotask(() => syncToCloud(get));
+          queueMicrotask(() => syncToCloud(get, set));
           return next;
         }),
       setPlan: (plan) => {
         set({ plan });
-        syncToCloud(get);
+        syncToCloud(get, set);
       },
       setProfile: (profile) => {
         set({ profile });
-        syncToCloud(get);
+        syncToCloud(get, set);
       },
       updateTechniqueStatus: (techniqueId, status) =>
         set((state) => {
@@ -150,7 +213,7 @@ export const usePlanStore = create<PlanState>()(
               ),
             },
           };
-          queueMicrotask(() => syncToCloud(get));
+          queueMicrotask(() => syncToCloud(get, set));
           return next;
         }),
       updateTechniqueNotes: (techniqueId, notes) =>
@@ -164,7 +227,7 @@ export const usePlanStore = create<PlanState>()(
               ),
             },
           };
-          queueMicrotask(() => syncToCloud(get));
+          queueMicrotask(() => syncToCloud(get, set));
           return next;
         }),
       replaceTechnique: (techniqueId, replacement) =>
@@ -179,18 +242,21 @@ export const usePlanStore = create<PlanState>()(
               ),
             },
           };
-          queueMicrotask(() => syncToCloud(get));
+          queueMicrotask(() => syncToCloud(get, set));
           return next;
         }),
       reset: () => {
         set({ plan: null, profile: null, streakDays: 0, interactionDates: [] });
-        syncToCloud(get);
+        syncToCloud(get, set);
       },
     }),
     {
       name: 'hobbyflow-plan',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        hobbies: state.hobbies,
+        activeHobbyId: state.activeHobbyId,
+        hobbySnapshots: state.hobbySnapshots,
         plan: state.plan,
         profile: state.profile,
         streakDays: state.streakDays,

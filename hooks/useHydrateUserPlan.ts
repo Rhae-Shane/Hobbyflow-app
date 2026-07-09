@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createLogger } from '@/lib/logger';
+import { fetchUserHobbies } from '@/services/hobbies';
 import { fetchUserPlan } from '@/services/userState';
 import { usePlanStore } from '@/store/usePlanStore';
 
@@ -20,25 +21,31 @@ export function useHydrateUserPlan(userId: string | undefined, isAuthenticated: 
     log.debug('Hydrating plan from cloud', { userId });
     setCloudHydrationStatus('loading');
 
-    fetchUserPlan(userId)
-      .then((row) => {
+    Promise.all([fetchUserHobbies(userId), fetchUserPlan(userId)])
+      .then(([hobbies, row]) => {
         if (cancelled) return;
 
-        if (!row) {
-          log.info('No cloud plan found for user', { userId });
+        if (hobbies.length === 0) {
+          log.info('No hobbies found for user', { userId });
           return;
         }
 
+        const activeHobby = hobbies.find((h) => h.is_active) ?? hobbies[0];
+
         hydrateFromCloud({
-          plan: row.plan,
-          profile: row.profile,
-          streakDays: row.streak_days,
-          updatedAt: row.updated_at,
+          hobbies,
+          activeHobbyId: row?.hobby_id ?? activeHobby?.id ?? null,
+          plan: row?.plan ?? null,
+          profile: row?.profile ?? null,
+          streakDays: row?.streak_days ?? 0,
+          updatedAt: row?.updated_at ?? new Date(0).toISOString(),
         });
+
         log.info('Cloud plan hydrated', {
           userId,
-          hasPlan: Boolean(row.plan),
-          streakDays: row.streak_days,
+          hobbyCount: hobbies.length,
+          activeHobbyId: activeHobby?.id,
+          hasPlan: Boolean(row?.plan),
         });
       })
       .catch((err: unknown) => {

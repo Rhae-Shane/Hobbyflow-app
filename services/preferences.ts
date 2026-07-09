@@ -34,17 +34,6 @@ export function userPreferencesToRow(
   };
 }
 
-function isEmptyPreferences(preferences: UserPreferences): boolean {
-  return (
-    preferences.topGoals.length === 0 &&
-    preferences.selectedTags.length === 0 &&
-    preferences.userRoles.length === 0 &&
-    preferences.learningStyles.length === 0 &&
-    preferences.dailyGoal === '' &&
-    preferences.contentLanguage === 'en'
-  );
-}
-
 export async function fetchUserPreferences(userId: string): Promise<UserPreferences | null> {
   const { data, error } = await supabase
     .from('user_preferences')
@@ -63,8 +52,7 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
     return null;
   }
 
-  const preferences = rowToUserPreferences(data as UserPreferencesRow);
-  return isEmptyPreferences(preferences) ? null : preferences;
+  return rowToUserPreferences(data as UserPreferencesRow);
 }
 
 export async function saveUserPreferences(
@@ -75,6 +63,9 @@ export async function saveUserPreferences(
     userId,
     topGoals: preferences.topGoals.length,
     selectedTags: preferences.selectedTags.length,
+    userRoles: preferences.userRoles.length,
+    learningStyles: preferences.learningStyles.length,
+    dailyGoal: preferences.dailyGoal,
   });
 
   const { error } = await supabase

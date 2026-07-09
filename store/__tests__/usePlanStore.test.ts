@@ -7,7 +7,11 @@ import {
 } from '@/store/usePlanStore';
 
 jest.mock('@/services/userState', () => ({
-  upsertUserPlan: jest.fn().mockResolvedValue(undefined),
+  upsertUserPlan: jest.fn().mockResolvedValue({ hobbyId: 'hobby-1' }),
+}));
+
+jest.mock('@/services/hobbies', () => ({
+  fetchUserHobbies: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('@/services/client', () => ({
@@ -78,6 +82,9 @@ describe('usePlanStore actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     usePlanStore.setState({
+      hobbies: [],
+      activeHobbyId: null,
+      hobbySnapshots: {},
       plan: {
         planId: 'pln_test',
         hobby: 'Chess',
@@ -96,7 +103,9 @@ describe('usePlanStore actions', () => {
 
   it('sets skipped status locally without calling the plan API', async () => {
     usePlanStore.getState().updateTechniqueStatus('t4', 'skipped');
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => {
+      queueMicrotask(() => resolve());
+    });
 
     const updated = usePlanStore.getState().plan?.techniques.find((t) => t.id === 't4');
     expect(updated?.status).toBe('skipped');

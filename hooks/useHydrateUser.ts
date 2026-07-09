@@ -1,0 +1,49 @@
+import { useEffect } from 'react';
+import { createLogger } from '@/lib/logger';
+import { fetchUser } from '@/services/profile';
+import { useUserStore } from '@/store/useUserStore';
+
+const log = createLogger('hydrate-user');
+
+export function useHydrateUser(userId: string | undefined, isAuthenticated: boolean) {
+  const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
+  const setHydrationStatus = useUserStore((s) => s.setHydrationStatus);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId) {
+      setHydrationStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+
+    log.debug('Hydrating user row from cloud', { userId });
+    setHydrationStatus('loading');
+
+    fetchUser(userId)
+      .then((row) => {
+        if (cancelled) return;
+        setCompletedOnboardingAt(row?.completed_onboarding_at ?? null);
+        log.info('User row hydrated', {
+          userId,
+          completedOnboarding: Boolean(row?.completed_onboarding_at),
+        });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        log.warn('User hydrate failed', {
+          userId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHydrationStatus('done');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, setCompletedOnboardingAt, setHydrationStatus, userId]);
+}

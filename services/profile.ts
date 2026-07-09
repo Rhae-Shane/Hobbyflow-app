@@ -2,36 +2,39 @@ import { createLogger } from '@/lib/logger';
 import { mapAuthUser } from '@/lib/mapAuthUser';
 import { AppError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
-import type { AppUser, ProfileRow } from '@/types/user.types';
+import type { AppUser, UserRow } from '@/types/user.types';
 import type { User } from '@supabase/supabase-js';
 
 const log = createLogger('profile');
 
-export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
+export async function fetchUser(userId: string): Promise<UserRow | null> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users')
     .select(
-      'id, email, full_name, avatar_url, provider, email_verified, created_at, updated_at',
+      'id, email, full_name, avatar_url, provider, email_verified, completed_onboarding_at, created_at, updated_at',
     )
     .eq('id', userId)
     .maybeSingle();
 
   if (error) {
-    log.error('Failed to fetch profile', { userId, error: error.message });
+    log.error('Failed to fetch user', { userId, error: error.message });
     throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
       cause: error,
     });
   }
 
-  return data as ProfileRow | null;
+  return data as UserRow | null;
 }
+
+/** @deprecated Use fetchUser — profiles table renamed to users */
+export const fetchProfile = fetchUser;
 
 export async function syncProfileFromAuth(user: User): Promise<AppUser> {
   const appUser = mapAuthUser(user);
 
-  log.debug('Syncing profile from auth', { userId: appUser.id, provider: appUser.provider });
+  log.debug('Syncing user from auth', { userId: appUser.id, provider: appUser.provider });
 
-  const { error } = await supabase.from('profiles').upsert({
+  const { error } = await supabase.from('users').upsert({
     id: appUser.id,
     email: appUser.email,
     full_name: appUser.fullName,
@@ -42,17 +45,17 @@ export async function syncProfileFromAuth(user: User): Promise<AppUser> {
   });
 
   if (error) {
-    log.error('Failed to sync profile', { userId: appUser.id, error: error.message });
+    log.error('Failed to sync user', { userId: appUser.id, error: error.message });
     throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
       cause: error,
     });
   }
 
-  log.info('Profile synced from auth', { userId: appUser.id });
+  log.info('User synced from auth', { userId: appUser.id });
   return appUser;
 }
 
-export function profileRowToAppUser(row: ProfileRow): AppUser {
+export function userRowToAppUser(row: UserRow): AppUser {
   return {
     id: row.id,
     email: row.email,
@@ -64,3 +67,6 @@ export function profileRowToAppUser(row: ProfileRow): AppUser {
     lastSignInAt: null,
   };
 }
+
+/** @deprecated Use userRowToAppUser */
+export const profileRowToAppUser = userRowToAppUser;

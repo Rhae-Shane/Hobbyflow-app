@@ -1,3 +1,3 @@
-import { PreferencesScreen } from '@/components/onboarding/PreferencesScreen';
+import { PreferencesWizard } from '@/components/onboarding/PreferencesWizard';
 
-export default PreferencesScreen;
+export default PreferencesWizard;

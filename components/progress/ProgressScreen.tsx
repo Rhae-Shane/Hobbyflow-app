@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { HobbiesList } from '@/components/hobbies/HobbiesList';
+import { HobbySwitcher } from '@/components/hobbies/HobbySwitcher';
 import { InlineError } from '@/components/ui/InlineError';
 import { StreakBadge } from '@/components/progress/StreakBadge';
 import { toAuthError } from '@/lib/errors';
@@ -15,6 +17,7 @@ import {
   usePlanStore,
 } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { useUserStore } from '@/store/useUserStore';
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
@@ -28,10 +31,12 @@ function StatRow({ label, value }: { label: string; value: string }) {
 export function ProgressScreen() {
   const router = useRouter();
   const plan = usePlanStore((s) => s.plan);
+  const hobbies = usePlanStore((s) => s.hobbies);
   const profile = usePlanStore((s) => s.profile);
   const streakDays = usePlanStore((s) => s.streakDays);
   const clearSession = usePlanStore((s) => s.clearSession);
   const clearPreferencesSession = usePreferencesStore((s) => s.clearSession);
+  const clearUserSession = useUserStore((s) => s.clearSession);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
@@ -53,6 +58,7 @@ export function ProgressScreen() {
       await signOut();
       clearSession();
       clearPreferencesSession();
+      clearUserSession();
       router.replace('/(auth)');
     } catch (err) {
       setSignOutError(toAuthError(err).userMessage);
@@ -61,7 +67,7 @@ export function ProgressScreen() {
     }
   };
 
-  if (!plan) {
+  if (hobbies.length === 0) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Progress</Text>
@@ -75,6 +81,27 @@ export function ProgressScreen() {
     );
   }
 
+  if (!plan) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Progress</Text>
+          <StreakBadge days={streakDays} />
+        </View>
+        <HobbySwitcher />
+        <HobbiesList />
+        <Pressable
+          disabled={isSigningOut}
+          onPress={handleSignOut}
+          style={[styles.signOutButton, isSigningOut && styles.signOutDisabled]}
+        >
+          <Text style={styles.signOutText}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
+        </Pressable>
+        {signOutError ? <InlineError message={signOutError} /> : null}
+      </View>
+    );
+  }
+
   const finishLabel =
     stats.estimatedDays === 1 ? '1 day' : `${stats.estimatedDays} days`;
 
@@ -84,6 +111,9 @@ export function ProgressScreen() {
         <Text style={styles.title}>Progress</Text>
         <StreakBadge days={streakDays} />
       </View>
+
+      <HobbySwitcher />
+      <HobbiesList />
 
       <View style={styles.statsCard}>
         <StatRow

@@ -6,52 +6,63 @@ export const TOP_GOALS = [
   'Explore new topics',
   'Just for fun',
   'Remember important learning',
-  'Master a hobby',
 ] as const;
 
 export const TOPIC_TAGS = [
   'AI',
+  'Psychology',
+  'Philosophy',
+  'Economics',
+  'History',
+  'Investing',
+  'Design',
+  'Learning',
+  'Longevity',
+  'Decision Making',
+  'Business',
+  'Science',
+  'Self-Improvement',
   'Strategy',
   'Software Engineering',
-  'Science',
-  'Music',
-  'Photography',
-  'Sports & Games',
-  'Creative Arts',
-  'Languages',
-  'Fitness & Wellness',
-  'Business',
-  'Design',
-  'Cooking',
-  'Writing',
 ] as const;
 
 export const USER_ROLES = [
-  'Student',
+  'Product Manager',
   'Business/Management',
+  'Designer/Creative',
+  'Student',
   'Developer/Engineer',
-  'Creative/Designer',
-  'Educator',
-  'Healthcare',
-  'Entrepreneur',
-  'Other',
+  'Research/Academic',
+  'Finance/Investment',
 ] as const;
 
 export const LEARNING_STYLES = [
-  'Real-world examples',
+  'Bite-sized lessons',
+  'Practice exercises',
   'Regular review',
+  'Hands-on projects',
   'Visual explanations',
-  'Step-by-step guides',
-  'Hands-on practice',
-  'Short daily sessions',
+  'Clear learning path',
+  'Real-world examples',
+  'Personalized difficulty',
 ] as const;
 
 export const DAILY_GOAL_OPTIONS = [
-  { label: '5 min / day', value: '5' },
-  { label: '10 min / day', value: '10' },
-  { label: '15 min / day', value: '15' },
-  { label: '30 min / day', value: '30' },
-  { label: '1 hr / day', value: '60' },
+  { value: '5', label: '5 min', subtitle: 'A toilet break' },
+  { value: '10', label: '10 min', subtitle: 'A bus ride' },
+  { value: '15', label: '15 min', subtitle: 'A lunch break' },
+  { value: '20', label: '> 20 min', subtitle: "I'm SERIOUS" },
 ] as const;
+
+export const LEARNING_STYLE_SUPPORT = {
+  currentlySupports: [
+    'Visual explanations',
+    'Regular review',
+    'Personalized difficulty',
+    'Real-world examples',
+  ],
+  workingOn: ['Hands-on projects'],
+  alsoSupports: ['Bite-sized lessons', 'Practice exercises', 'Clear learning path'],
+} as const;
 
 export const DEFAULT_CONTENT_LANGUAGE = 'en';

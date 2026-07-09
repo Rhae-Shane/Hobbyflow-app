@@ -5,31 +5,50 @@ import { usePlanStoreHydrated } from '@/hooks/usePlanStoreHydrated';
 import { getPostAuthRoute, hasCompletedPreferences } from '@/lib/routing';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 import { colors } from '@/constants/tokens';
 
 export default function TabsLayout() {
   const router = useRouter();
-  const plan = usePlanStore((s) => s.plan);
+  const hobbies = usePlanStore((s) => s.hobbies);
   const cloudHydrationStatus = usePlanStore((s) => s.cloudHydrationStatus);
   const preferences = usePreferencesStore((s) => s.preferences);
+  const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const userHydrationStatus = useUserStore((s) => s.hydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
-  const waitingForCloudPlan = !plan && cloudHydrationStatus === 'loading';
+  const onboardingComplete = hasCompletedOnboarding(completedOnboardingAt);
+  const waitingForCloud =
+    !onboardingComplete && hobbies.length === 0 && cloudHydrationStatus === 'loading';
+  const waitingForUser = userHydrationStatus === 'loading';
 
   useEffect(() => {
-    if (!storeHydrated || waitingForCloudPlan) return;
+    if (!storeHydrated || waitingForCloud || waitingForUser) return;
 
     const route = getPostAuthRoute({
+      completedOnboardingAt,
       hasPreferences: hasCompletedPreferences(preferences),
-      hasPlan: Boolean(plan),
+      hasHobbies: hobbies.length > 0,
     });
 
     if (route !== '/(app)/(tabs)') {
       router.replace(route);
     }
-  }, [plan, preferences, router, storeHydrated, waitingForCloudPlan]);
+  }, [
+    completedOnboardingAt,
+    hobbies.length,
+    preferences,
+    router,
+    storeHydrated,
+    waitingForCloud,
+    waitingForUser,
+  ]);
 
-  if (!storeHydrated || waitingForCloudPlan || !plan) {
+  if (!storeHydrated || waitingForUser) {
+    return <BootSpinner />;
+  }
+
+  if (!onboardingComplete && (waitingForCloud || hobbies.length === 0)) {
     return <BootSpinner />;
   }
 

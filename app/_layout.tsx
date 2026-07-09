@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { InlineError } from '@/components/ui/InlineError';
 import { useAuth } from '@/hooks/useAuth';
+import { useHydrateUser } from '@/hooks/useHydrateUser';
 import { useHydratePreferences } from '@/hooks/useHydratePreferences';
 import { useHydrateUserPlan } from '@/hooks/useHydrateUserPlan';
 import { useOAuthDeepLink } from '@/hooks/useOAuthDeepLink';
@@ -30,6 +31,7 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
 
   useOAuthDeepLink();
   useSyncUserProfile(session?.user);
+  useHydrateUser(user?.id, Boolean(user));
   useHydratePreferences(user?.id, Boolean(user));
   useHydrateUserPlan(user?.id, Boolean(user));
 
