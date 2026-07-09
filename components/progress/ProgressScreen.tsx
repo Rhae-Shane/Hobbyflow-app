@@ -14,6 +14,7 @@ import {
   getSkippedCount,
   usePlanStore,
 } from '@/store/usePlanStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
@@ -30,6 +31,7 @@ export function ProgressScreen() {
   const profile = usePlanStore((s) => s.profile);
   const streakDays = usePlanStore((s) => s.streakDays);
   const clearSession = usePlanStore((s) => s.clearSession);
+  const clearPreferencesSession = usePreferencesStore((s) => s.clearSession);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
@@ -50,6 +52,7 @@ export function ProgressScreen() {
     try {
       await signOut();
       clearSession();
+      clearPreferencesSession();
       router.replace('/(auth)');
     } catch (err) {
       setSignOutError(toAuthError(err).userMessage);

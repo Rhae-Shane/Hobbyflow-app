@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { createLogger } from '@/lib/logger';
+import { mapAuthUser } from '@/lib/mapAuthUser';
 import { supabase } from '@/lib/supabase';
+import type { AppUser } from '@/types/user.types';
 
 const log = createLogger('auth-hook');
 
 type AuthState = {
   session: Session | null;
-  user: User | null;
+  user: AppUser | null;
   isLoading: boolean;
   error: string | null;
 };
@@ -63,7 +65,7 @@ export function useAuth(): AuthState {
 
   return {
     session,
-    user: session?.user ?? null,
+    user: session?.user ? mapAuthUser(session.user) : null,
     isLoading,
     error,
   };

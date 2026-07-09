@@ -4,6 +4,7 @@ import { ApiError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import type { ApiErrorBody } from '@/lib/errors';
 import { createLogger } from '@/lib/logger';
 import { usePlanStore } from '@/store/usePlanStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 const log = createLogger('api');
 
@@ -14,6 +15,7 @@ async function handleUnauthorized(path: string) {
   log.warn('Session expired', { path });
   await signOut();
   usePlanStore.getState().clearSession();
+  usePreferencesStore.getState().clearSession();
   Alert.alert('Session expired', getKnownUserMessage(ErrorCodes.SESSION_EXPIRED));
 }
 

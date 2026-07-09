@@ -7,8 +7,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { InlineError } from '@/components/ui/InlineError';
 import { useAuth } from '@/hooks/useAuth';
+import { useHydratePreferences } from '@/hooks/useHydratePreferences';
 import { useHydrateUserPlan } from '@/hooks/useHydrateUserPlan';
 import { useOAuthDeepLink } from '@/hooks/useOAuthDeepLink';
+import { useSyncUserProfile } from '@/hooks/useSyncUserProfile';
 import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { usePlanStore } from '@/store/usePlanStore';
@@ -23,10 +25,12 @@ const queryClient = new QueryClient({
 });
 
 function AuthHydration({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, error } = useAuth();
+  const { session, user, isLoading, error } = useAuth();
   const setUserId = usePlanStore((s) => s.setUserId);
 
   useOAuthDeepLink();
+  useSyncUserProfile(session?.user);
+  useHydratePreferences(user?.id, Boolean(user));
   useHydrateUserPlan(user?.id, Boolean(user));
 
   useEffect(() => {
