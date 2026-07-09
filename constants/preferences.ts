@@ -235,6 +235,26 @@ function hintLines(
   return [`${sectionTitle}:`, ...lines];
 }
 
+function buildAccessibilityOverrides(preferences: SavedPreferences): string[] {
+  const overrides: string[] = [];
+  const accessibilityNeeds = new Set(preferences.accessibilityNeeds);
+  const learningStyles = new Set(preferences.learningStyles);
+
+  if (accessibilityNeeds.has('Blindness') && learningStyles.has('Video')) {
+    overrides.push(
+      'Accessibility override: Blindness takes priority over video preference — do not assign video modality.',
+    );
+  }
+
+  if (accessibilityNeeds.has('Hearing impairment / deafness') && learningStyles.has('Audio')) {
+    overrides.push(
+      'Accessibility override: Hearing impairment takes priority over audio preference — do not assign audio modality.',
+    );
+  }
+
+  return overrides;
+}
+
 /** Plain-text block for AI planner / chat prompts from saved user preferences. */
 export function buildPreferencesAiContext(preferences: SavedPreferences): string {
   const ageHint = preferences.ageRange
@@ -276,6 +296,7 @@ export function buildPreferencesAiContext(preferences: SavedPreferences): string
       LEARNING_STYLES_AI_HINTS,
       'Preferred content format',
     ),
+    ...buildAccessibilityOverrides(preferences),
   ].filter(Boolean);
 
   return sections.join('\n');

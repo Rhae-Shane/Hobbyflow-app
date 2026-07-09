@@ -19,4 +19,19 @@ describe('buildPreferencesAiContext', () => {
     expect(context).toContain('Practice environment:');
     expect(context).toContain('Resource budget: Free resources only');
   });
+
+  it('adds an override when blindness conflicts with video preference', () => {
+    const context = buildPreferencesAiContext({
+      userRole: 'Student',
+      ageRange: '18–24',
+      topGoals: ['Relax and de-stress'],
+      accessibilityNeeds: ['Blindness'],
+      learningStrengths: ['Learn well by listening'],
+      practiceEnvironments: ['At home only'],
+      resourceBudget: 'Free resources only',
+      learningStyles: ['Video', 'Audio'],
+    });
+
+    expect(context).toContain('Accessibility override: Blindness takes priority over video preference');
+  });
 });
