@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { InlineError } from '@/components/ui/InlineError';
 import { StreakBadge } from '@/components/progress/StreakBadge';
+import { toAuthError } from '@/lib/errors';
 import { signOut } from '@/lib/auth';
 import { colors, radii, spacing } from '@/constants/tokens';
 import {
@@ -29,6 +31,7 @@ export function ProgressScreen() {
   const streakDays = usePlanStore((s) => s.streakDays);
   const clearSession = usePlanStore((s) => s.clearSession);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const techniques = plan?.techniques ?? [];
@@ -42,11 +45,14 @@ export function ProgressScreen() {
   }, [plan?.techniques, profile?.timeBudget]);
 
   const handleSignOut = async () => {
+    setSignOutError(null);
     setIsSigningOut(true);
     try {
       await signOut();
       clearSession();
       router.replace('/(auth)');
+    } catch (err) {
+      setSignOutError(toAuthError(err).userMessage);
     } finally {
       setIsSigningOut(false);
     }
@@ -93,6 +99,7 @@ export function ProgressScreen() {
       >
         <Text style={styles.signOutText}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
       </Pressable>
+      {signOutError ? <InlineError message={signOutError} /> : null}
     </View>
   );
 }

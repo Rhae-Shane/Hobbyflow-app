@@ -1,4 +1,5 @@
 import { createLogger } from '@/lib/logger';
+import { AppError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import type { OnboardingProfile, Plan } from '@/types/plan.types';
 
@@ -23,7 +24,9 @@ export async function fetchUserPlan(userId: string): Promise<UserPlanRow | null>
 
   if (error) {
     log.error('Failed to fetch user plan', { userId, error: error.message });
-    throw new Error(error.message);
+    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
+      cause: error,
+    });
   }
 
   return data as UserPlanRow | null;
@@ -53,7 +56,9 @@ export async function upsertUserPlan(
 
   if (error) {
     log.error('Failed to upsert user plan', { userId, error: error.message });
-    throw new Error(error.message);
+    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
+      cause: error,
+    });
   }
 
   log.info('User plan synced to cloud', { userId });

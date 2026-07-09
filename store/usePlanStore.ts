@@ -2,8 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import dayjs from 'dayjs';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { createLogger } from '@/lib/logger';
 import { upsertUserPlan } from '@/services/userState';
 import type { OnboardingProfile, Plan, Technique, TechniqueStatus } from '@/types/plan.types';
+
+const log = createLogger('plan-store');
 
 type PlanState = {
   plan: Plan | null;
@@ -65,8 +68,11 @@ function syncToCloud(getState: () => PlanState) {
   const { userId, plan, profile, streakDays } = getState();
   if (!userId) return;
 
-  void upsertUserPlan(userId, { plan, profile, streakDays }).catch(() => {
-    // Best-effort sync — local state remains source of truth offline.
+  void upsertUserPlan(userId, { plan, profile, streakDays }).catch((err: unknown) => {
+    log.warn('Cloud sync failed — local state kept', {
+      userId,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
   });
 }
 

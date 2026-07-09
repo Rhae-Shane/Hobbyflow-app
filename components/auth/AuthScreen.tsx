@@ -9,6 +9,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { InlineError } from '@/components/ui/InlineError';
+import { toAuthError } from '@/lib/errors';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/lib/auth';
 import { colors, radii, spacing } from '@/constants/tokens';
 
@@ -41,7 +43,10 @@ export function AuthScreen() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      const authError = toAuthError(err);
+      if (authError.code !== 'AUTH_CANCELLED') {
+        setError(authError.userMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -54,7 +59,10 @@ export function AuthScreen() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed');
+      const authError = toAuthError(err);
+      if (authError.code !== 'AUTH_CANCELLED') {
+        setError(authError.userMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +99,7 @@ export function AuthScreen() {
           onChangeText={setPassword}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <InlineError message={error} /> : null}
         {info ? <Text style={styles.info}>{info}</Text> : null}
 
         <Pressable

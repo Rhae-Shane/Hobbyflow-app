@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@/lib/errors';
 import { createLogger } from '@/lib/logger';
 import { apiRequest } from '@/services/client';
 import type { Plan } from '@/types/plan.types';
@@ -18,7 +19,11 @@ export function useGeneratePlan() {
       setPlan(plan);
     },
     onError: (error: Error, input) => {
-      log.error('Plan generation failed', { hobby: input.hobby, error: error.message });
+      const details =
+        error instanceof ApiError
+          ? { code: error.code, status: error.status, requestId: error.requestId }
+          : { error: error.message };
+      log.error('Plan generation failed', { hobby: input.hobby, ...details });
     },
   });
 }
@@ -47,10 +52,14 @@ export function useReplaceTechnique() {
       void queryClient.invalidateQueries();
     },
     onError: (error: Error, variables) => {
+      const details =
+        error instanceof ApiError
+          ? { code: error.code, status: error.status, requestId: error.requestId }
+          : { error: error.message };
       log.error('Technique replacement failed', {
         techniqueId: variables.techniqueId,
         hobby: variables.hobby,
-        error: error.message,
+        ...details,
       });
     },
   });

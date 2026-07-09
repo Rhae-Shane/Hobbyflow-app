@@ -1,17 +1,27 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { InlineError } from '@/components/ui/InlineError';
 import { useAuth } from '@/hooks/useAuth';
 import { useHydrateUserPlan } from '@/hooks/useHydrateUserPlan';
+import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { usePlanStore } from '@/store/usePlanStore';
-import { colors } from '@/constants/tokens';
+import { colors, spacing } from '@/constants/tokens';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 function AuthHydration({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, error } = useAuth();
   const setUserId = usePlanStore((s) => s.setUserId);
 
   useHydrateUserPlan(user?.id, Boolean(user));
@@ -19,6 +29,14 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setUserId(user?.id ?? null);
   }, [setUserId, user?.id]);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <View style={styles.loading}>
+        <InlineError message="App configuration is incomplete. Please check your environment settings." />
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -28,21 +46,35 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.errorTitle}>Couldn't load your session</Text>
+        <InlineError message={error} />
+        <Text style={styles.errorHint}>
+          {getKnownUserMessage(ErrorCodes.AUTH_FAILED)} Try restarting the app.
+        </Text>
+      </View>
+    );
+  }
+
   return children;
 }
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthHydration>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" />
-        </Stack>
-      </AuthHydration>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthHydration>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" />
+          </Stack>
+        </AuthHydration>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -51,6 +83,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background,
     flex: 1,
+    gap: spacing.md,
     justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  errorTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorHint: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

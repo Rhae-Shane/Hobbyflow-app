@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { InlineError } from '@/components/ui/InlineError';
+import { getStarterPlan } from '@/lib/starterPlans';
+import { planRequestSchema } from '@/lib/validation/planRequest.schema';
 import { useGeneratePlan } from '@/services/queries';
 import { usePlanStore } from '@/store/usePlanStore';
 import { colors, radii, spacing } from '@/constants/tokens';
 import type { OnboardingProfile, Plan } from '@/types/plan.types';
-import { planRequestSchema } from '@/lib/validation/planRequest.schema';
 import { HobbyPicker } from '@/components/onboarding/HobbyPicker';
 
 const LEVELS: { label: string; value: Plan['level'] }[] = [
@@ -34,8 +36,11 @@ const LOADING_MESSAGES = [
   'Almost done...',
 ];
 
+const GENERATION_ERROR_MESSAGE = "Couldn't generate your roadmap.";
+
 export function OnboardingScreen() {
   const router = useRouter();
+  const setPlan = usePlanStore((s) => s.setPlan);
   const setProfile = usePlanStore((s) => s.setProfile);
   const generatePlan = useGeneratePlan();
 
@@ -43,39 +48,76 @@ export function OnboardingScreen() {
   const [level, setLevel] = useState<Plan['level']>('beginner');
   const [timeBudget, setTimeBudget] = useState<OnboardingProfile['timeBudget']>('30 min/day');
   const [goal, setGoal] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [generationFailed, setGenerationFailed] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const lastRequestRef = useRef<ReturnType<typeof planRequestSchema.safeParse>['data'] | null>(
+    null,
+  );
 
   const isLoading = generatePlan.isPending;
 
+  const completeOnboarding = (plan: Plan, profile: OnboardingProfile) => {
+    setPlan(plan);
+    setProfile(profile);
+    router.replace('/(app)/(tabs)');
+  };
+
   const handleContinue = async () => {
-    setError(null);
+    setValidationError(null);
+    setGenerationFailed(false);
 
     const parsed = planRequestSchema.safeParse({ hobby, level, goal, timeBudget });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Please complete the form');
+      setValidationError(parsed.error.issues[0]?.message ?? 'Please complete the form');
       return;
     }
+
+    lastRequestRef.current = parsed.data;
 
     const interval = setInterval(() => {
       setLoadingMessageIndex((i) => (i + 1) % LOADING_MESSAGES.length);
     }, 2500);
 
     try {
-      await generatePlan.mutateAsync(parsed.data);
-      setProfile({
+      const plan = await generatePlan.mutateAsync(parsed.data);
+      completeOnboarding(plan, {
         hobby: parsed.data.hobby,
         level: parsed.data.level,
         goal: parsed.data.goal,
         timeBudget: parsed.data.timeBudget,
       });
-      router.replace('/(app)/(tabs)');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate plan');
+    } catch {
+      setGenerationFailed(true);
     } finally {
       clearInterval(interval);
     }
   };
+
+  const handleUseStarterPlan = () => {
+    const payload = lastRequestRef.current ?? planRequestSchema.safeParse({ hobby, level, goal, timeBudget }).data;
+    if (!payload) {
+      setValidationError('Please complete the form first');
+      return;
+    }
+
+    const starter = getStarterPlan(payload);
+    if (!starter) {
+      setValidationError('Starter plans are available for Chess, Guitar, and Poker.');
+      return;
+    }
+
+    setGenerationFailed(false);
+    setValidationError(null);
+    completeOnboarding(starter, {
+      hobby: payload.hobby,
+      level: payload.level,
+      goal: payload.goal,
+      timeBudget: payload.timeBudget,
+    });
+  };
+
+  const starterAvailable = Boolean(getStarterPlan({ hobby, level, goal, timeBudget }));
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -131,7 +173,27 @@ export function OnboardingScreen() {
         })}
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {validationError ? <InlineError message={validationError} /> : null}
+
+      {generationFailed ? (
+        <View style={styles.failureCard}>
+          <InlineError message={GENERATION_ERROR_MESSAGE} />
+          <View style={styles.failureActions}>
+            <Pressable
+              style={[styles.button, styles.buttonSecondary, isLoading && styles.buttonDisabled]}
+              onPress={handleContinue}
+              disabled={isLoading}
+            >
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Try Again</Text>
+            </Pressable>
+            {starterAvailable ? (
+              <Pressable style={styles.button} onPress={handleUseStarterPlan}>
+                <Text style={styles.buttonText}>Use Starter Plan</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       <Pressable
         style={[styles.button, (!hobby || isLoading) && styles.buttonDisabled]}
@@ -212,16 +274,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  error: {
-    color: '#DC2626',
-    fontSize: 14,
+  failureCard: {
+    gap: spacing.sm,
+  },
+  failureActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   button: {
     alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: radii.card,
-    marginTop: spacing.md,
+    flexGrow: 1,
     paddingVertical: spacing.md,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -230,6 +301,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  buttonTextSecondary: {
+    color: colors.text,
   },
   loadingRow: {
     alignItems: 'center',

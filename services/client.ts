@@ -1,17 +1,20 @@
 import { Alert } from 'react-native';
 import { getAccessToken, signOut } from '@/lib/auth';
+import { ApiError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
+import type { ApiErrorBody } from '@/lib/errors';
 import { createLogger } from '@/lib/logger';
 import { usePlanStore } from '@/store/usePlanStore';
 
 const log = createLogger('api');
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const REQUEST_TIMEOUT_MS = 30_000;
 
 async function handleUnauthorized(path: string) {
   log.warn('Session expired', { path });
   await signOut();
   usePlanStore.getState().clearSession();
-  Alert.alert('Session expired', 'Please sign in again.');
+  Alert.alert('Session expired', getKnownUserMessage(ErrorCodes.SESSION_EXPIRED));
 }
 
 type RequestOptions = {
@@ -19,6 +22,20 @@ type RequestOptions = {
   body?: unknown;
   auth?: boolean;
 };
+
+async function parseResponseBody(response: Response): Promise<ApiErrorBody> {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ApiErrorBody;
+  } catch {
+    log.warn('Non-JSON API response', { status: response.status });
+    return {};
+  }
+}
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET';
@@ -33,29 +50,57 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   log.debug('API request', { method, path });
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const data = await response.json();
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      log.error('API request timed out', { method, path });
+      throw new ApiError(408, ErrorCodes.NETWORK_ERROR, getKnownUserMessage(ErrorCodes.NETWORK_ERROR), {
+        cause: err,
+      });
+    }
+
+    log.error('API network error', {
+      method,
+      path,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
+    throw new ApiError(0, ErrorCodes.NETWORK_ERROR, getKnownUserMessage(ErrorCodes.NETWORK_ERROR), {
+      cause: err,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const data = await parseResponseBody(response);
 
   if (response.status === 401) {
     await handleUnauthorized(path);
-    throw new Error('Session expired');
+    throw new ApiError(401, ErrorCodes.SESSION_EXPIRED, getKnownUserMessage(ErrorCodes.SESSION_EXPIRED), {
+      requestId: data.requestId,
+    });
   }
 
   if (!response.ok) {
-    const message = data?.error ?? `Request failed (${response.status})`;
+    const apiError = ApiError.fromResponse(response.status, data);
     log.error('API request failed', {
       method,
       path,
       status: response.status,
-      requestId: data?.requestId,
-      error: message,
+      code: apiError.code,
+      requestId: apiError.requestId,
     });
-    throw new Error(message);
+    throw apiError;
   }
 
   log.debug('API response', { method, path, status: response.status });

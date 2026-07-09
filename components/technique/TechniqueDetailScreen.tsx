@@ -3,7 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
+import { InlineError } from '@/components/ui/InlineError';
 import { ReplaceTechniqueSheet } from '@/components/technique/ReplaceTechniqueSheet';
+import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { useReplaceTechnique } from '@/services/queries';
 import { usePlanStore } from '@/store/usePlanStore';
 import { buildResourceUrl } from '@/utils/resourceUrlBuilder';
@@ -27,13 +29,19 @@ export function TechniqueDetailScreen() {
 
   const [actionsVisible, setActionsVisible] = useState(false);
   const [replaceVisible, setReplaceVisible] = useState(false);
+  const [resourceError, setResourceError] = useState<string | null>(null);
 
   const technique = plan?.techniques.find((t) => t.id === techniqueId);
 
   const handleOpenResource = useCallback(async () => {
     if (!technique || !plan) return;
+    setResourceError(null);
     const url = buildResourceUrl(technique.modality, technique.searchQuery, plan.hobby);
-    await WebBrowser.openBrowserAsync(url);
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch {
+      setResourceError(getKnownUserMessage(ErrorCodes.BROWSER_UNAVAILABLE));
+    }
   }, [plan, technique]);
 
   const handleMarkInProgress = useCallback(() => {
@@ -46,7 +54,11 @@ export function TechniqueDetailScreen() {
     if (!techniqueId) return;
     updateTechniqueStatus(techniqueId, 'mastered');
     setActionsVisible(false);
-    void import('@/utils/celebrateMastered').then(({ celebrateMastered }) => celebrateMastered());
+    void import('@/utils/celebrateMastered')
+      .then(({ celebrateMastered }) => celebrateMastered())
+      .catch(() => {
+        // Confetti is optional — never block the mastered flow.
+      });
     router.back();
   }, [router, techniqueId, updateTechniqueStatus]);
 
@@ -127,6 +139,7 @@ export function TechniqueDetailScreen() {
         <Pressable style={styles.resourceButton} onPress={handleOpenResource}>
           <Text style={styles.resourceButtonText}>Open resource</Text>
         </Pressable>
+        {resourceError ? <InlineError message={resourceError} /> : null}
 
         <Text style={styles.sectionLabel}>Personal notes</Text>
         <TextInput
