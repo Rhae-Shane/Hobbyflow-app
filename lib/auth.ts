@@ -1,7 +1,10 @@
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
+import { createLogger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
+
+const log = createLogger('auth');
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -34,6 +37,8 @@ async function createSessionFromUrl(url: string) {
 }
 
 export async function signInWithGoogle() {
+  log.info('Starting Google sign-in');
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -43,48 +48,66 @@ export async function signInWithGoogle() {
   });
 
   if (error) {
+    log.error('Google sign-in failed', { error: error.message });
     throw error;
   }
 
   if (!data.url) {
+    log.error('Google sign-in URL missing');
     throw new Error('Google sign-in URL was not returned');
   }
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
   if (result.type !== 'success') {
+    log.warn('Google sign-in cancelled');
     throw new Error('Google sign-in was cancelled');
   }
 
-  return createSessionFromUrl(result.url);
+  const session = await createSessionFromUrl(result.url);
+  log.info('Google sign-in succeeded', { userId: session?.user?.id });
+  return session;
 }
 
 export async function signInWithEmail(email: string, password: string) {
+  log.info('Starting email sign-in', { email });
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    log.warn('Email sign-in failed', { email, error: error.message });
     throw error;
   }
 
+  log.info('Email sign-in succeeded', { userId: data.session?.user?.id });
   return data.session;
 }
 
 export async function signUpWithEmail(email: string, password: string) {
+  log.info('Starting email sign-up', { email });
+
   const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
+    log.warn('Email sign-up failed', { email, error: error.message });
     throw error;
   }
 
+  log.info('Email sign-up succeeded', { userId: data.session?.user?.id });
   return data.session;
 }
 
 export async function signOut() {
+  log.info('Signing out');
+
   const { error } = await supabase.auth.signOut();
 
   if (error) {
+    log.error('Sign-out failed', { error: error.message });
     throw error;
   }
+
+  log.info('Sign-out succeeded');
 }
 
 export async function getAccessToken(): Promise<string | null> {
