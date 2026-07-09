@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/services/client';
 import type { Plan } from '@/types/plan.types';
 import type { PlanRequestInput } from '@/lib/validation/planRequest.schema';
@@ -15,6 +15,7 @@ export function useGeneratePlan() {
 }
 
 export function useReplaceTechnique() {
+  const queryClient = useQueryClient();
   const replaceTechnique = usePlanStore((s) => s.replaceTechnique);
 
   return useMutation({
@@ -30,6 +31,7 @@ export function useReplaceTechnique() {
     }),
     onSuccess: (data, variables) => {
       replaceTechnique(variables.techniqueId, data.technique);
+      void queryClient.invalidateQueries();
     },
   });
 }
