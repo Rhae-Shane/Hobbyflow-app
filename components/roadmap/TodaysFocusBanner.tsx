@@ -11,7 +11,7 @@ export function TodaysFocusBanner({ technique }: Props) {
     return (
       <View style={styles.banner}>
         <Text style={styles.label}>Today's Focus</Text>
-        <Text style={styles.title}>Roadmap complete</Text>
+        <Text style={styles.title}>🎉 Roadmap complete</Text>
       </View>
     );
   }

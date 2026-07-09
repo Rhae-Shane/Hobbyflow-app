@@ -1,11 +1,112 @@
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '@/constants/tokens';
+import { FlashList } from '@shopify/flash-list';
+import { Link, useRouter } from 'expo-router';
+import { StreakBadge } from '@/components/progress/StreakBadge';
+import { TechniqueCard } from '@/components/roadmap/TechniqueCard';
+import { TodaysFocusBanner } from '@/components/roadmap/TodaysFocusBanner';
+import { colors, radii, spacing } from '@/constants/tokens';
+import {
+  getMasteredCount,
+  getTodaysFocus,
+  usePlanStore,
+} from '@/store/usePlanStore';
+import type { Technique } from '@/types/plan.types';
+
+function TechniqueCardSkeleton() {
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonLineWide} />
+      <View style={styles.skeletonLineNarrow} />
+      <View style={styles.skeletonBadge} />
+    </View>
+  );
+}
 
 export function RoadmapScreen() {
+  const router = useRouter();
+  const plan = usePlanStore((s) => s.plan);
+  const streakDays = usePlanStore((s) => s.streakDays);
+  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  const techniques = useMemo(
+    () => [...(plan?.techniques ?? [])].sort((a, b) => a.order - b.order),
+    [plan?.techniques],
+  );
+
+  const activeCount = techniques.filter((t) => t.status !== 'skipped').length;
+  const masteredCount = getMasteredCount(techniques);
+  const todaysFocus = getTodaysFocus(techniques);
+  const currentName = todaysFocus?.name ?? 'All done';
+
+  useEffect(() => {
+    if (!plan) {
+      setShowSkeleton(false);
+      return;
+    }
+
+    setShowSkeleton(true);
+    const timer = setTimeout(() => setShowSkeleton(false), 400);
+    return () => clearTimeout(timer);
+  }, [plan?.planId]);
+
+  if (!plan) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyRow}>
+          <Text style={styles.emptyText}>No roadmap yet — </Text>
+          <Link href="/(app)/onboarding">
+            <Text style={styles.emptyLink}>choose a hobby to begin.</Text>
+          </Link>
+        </View>
+      </View>
+    );
+  }
+
+  const renderItem = ({ item }: { item: Technique }) => (
+    <TechniqueCard
+      technique={item}
+      onPress={() => router.push(`/(app)/technique/${item.id}`)}
+    />
+  );
+
+  const listHeader = (
+    <View style={styles.header}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>{plan.hobby}</Text>
+        <StreakBadge days={streakDays} />
+      </View>
+      <Text style={styles.progress}>
+        {masteredCount} / {activeCount} mastered · Current: {currentName}
+      </Text>
+      <TodaysFocusBanner technique={todaysFocus} />
+    </View>
+  );
+
+  if (showSkeleton) {
+    return (
+      <View style={styles.container}>
+        {listHeader}
+        <View style={styles.skeletonList}>
+          {Array.from({ length: 4 }, (_, i) => (
+            <TechniqueCardSkeleton key={i} />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Roadmap</Text>
-      <Text style={styles.hint}>No roadmap yet — complete onboarding to begin.</Text>
+      <FlashList
+        data={techniques}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        estimatedItemSize={110}
+      />
     </View>
   );
 }
@@ -16,14 +117,75 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  header: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   title: {
     color: colors.text,
+    flex: 1,
     fontSize: 24,
     fontWeight: '700',
   },
-  hint: {
+  progress: {
     color: colors.textMuted,
     fontSize: 15,
+  },
+  listContent: {
+    paddingBottom: spacing.xl,
+  },
+  separator: {
+    height: spacing.md,
+  },
+  emptyRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 16,
+  },
+  emptyLink: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  skeletonList: {
+    gap: spacing.md,
     marginTop: spacing.md,
+  },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  skeletonLineWide: {
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    height: 16,
+    width: '70%',
+  },
+  skeletonLineNarrow: {
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    height: 13,
+    width: '45%',
+  },
+  skeletonBadge: {
+    backgroundColor: colors.border,
+    borderRadius: radii.pill,
+    height: 22,
+    width: 72,
   },
 });
