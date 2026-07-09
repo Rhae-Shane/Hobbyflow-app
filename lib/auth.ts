@@ -8,9 +8,12 @@ const log = createLogger('auth');
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectTo = makeRedirectUri({ scheme: 'hobbyflow' });
+const redirectTo = makeRedirectUri({
+  scheme: 'hobbyflow',
+  path: '',
+});
 
-async function createSessionFromUrl(url: string) {
+export async function createSessionFromUrl(url: string) {
   const { params, errorCode } = QueryParams.getQueryParams(url);
 
   if (errorCode) {

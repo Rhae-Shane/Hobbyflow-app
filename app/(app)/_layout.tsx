@@ -1,11 +1,20 @@
-import { Redirect, Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { BootSpinner } from '@/components/BootSpinner';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AppLayout() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
 
-  if (!user) {
-    return <Redirect href="/(auth)" />;
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/(auth)');
+    }
+  }, [isLoading, router, user]);
+
+  if (isLoading || !user) {
+    return <BootSpinner />;
   }
 
   return (

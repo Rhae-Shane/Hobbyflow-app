@@ -95,10 +95,14 @@ export function OnboardingScreen() {
   };
 
   const handleUseStarterPlan = () => {
-    const payload = lastRequestRef.current ?? planRequestSchema.safeParse({ hobby, level, goal, timeBudget }).data;
+    let payload = lastRequestRef.current;
     if (!payload) {
-      setValidationError('Please complete the form first');
-      return;
+      const parsed = planRequestSchema.safeParse({ hobby, level, goal, timeBudget });
+      if (!parsed.success) {
+        setValidationError(parsed.error.issues[0]?.message ?? 'Please complete the form first');
+        return;
+      }
+      payload = parsed.data;
     }
 
     const starter = getStarterPlan(payload);
@@ -117,7 +121,7 @@ export function OnboardingScreen() {
     });
   };
 
-  const starterAvailable = Boolean(getStarterPlan({ hobby, level, goal, timeBudget }));
+  const starterAvailable = Boolean(getStarterPlan({ hobby, level, goal }));
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">

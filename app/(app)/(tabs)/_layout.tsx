@@ -1,12 +1,24 @@
-import { Redirect, Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { BootSpinner } from '@/components/BootSpinner';
+import { usePlanStoreHydrated } from '@/hooks/usePlanStoreHydrated';
 import { usePlanStore } from '@/store/usePlanStore';
 import { colors } from '@/constants/tokens';
 
 export default function TabsLayout() {
+  const router = useRouter();
   const plan = usePlanStore((s) => s.plan);
+  const storeHydrated = usePlanStoreHydrated();
 
-  if (!plan) {
-    return <Redirect href="/(app)/onboarding" />;
+  useEffect(() => {
+    if (!storeHydrated) return;
+    if (!plan) {
+      router.replace('/(app)/onboarding');
+    }
+  }, [plan, router, storeHydrated]);
+
+  if (!storeHydrated || !plan) {
+    return <BootSpinner />;
   }
 
   return (

@@ -3,10 +3,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { InlineError } from '@/components/ui/InlineError';
 import { useAuth } from '@/hooks/useAuth';
 import { useHydrateUserPlan } from '@/hooks/useHydrateUserPlan';
+import { useOAuthDeepLink } from '@/hooks/useOAuthDeepLink';
 import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { usePlanStore } from '@/store/usePlanStore';
@@ -24,6 +26,7 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
   const { user, isLoading, error } = useAuth();
   const setUserId = usePlanStore((s) => s.setUserId);
 
+  useOAuthDeepLink();
   useHydrateUserPlan(user?.id, Boolean(user));
 
   useEffect(() => {
@@ -64,16 +67,18 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthHydration>
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-        </AuthHydration>
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthHydration>
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(app)" />
+            </Stack>
+          </AuthHydration>
+        </QueryClientProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
