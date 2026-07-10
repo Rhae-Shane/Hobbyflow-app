@@ -46,7 +46,7 @@ export function HobbySwitcher({ compact = false }: Props) {
 
   const handleAddHobby = () => {
     setOpen(false);
-    router.push('/(app)/onboarding?mode=add');
+    router.push('/(app)/roadmap-creation?mode=add');
   };
 
   if (hobbies.length === 0 && !plan) {

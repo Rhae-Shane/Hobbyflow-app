@@ -64,7 +64,7 @@ export function RoadmapScreen() {
               ? `No roadmap for ${activeHobby.name} yet — `
               : 'No roadmap yet — '}
           </Text>
-          <Link href="/(app)/onboarding?mode=add">
+          <Link href="/(app)/roadmap-creation?mode=add">
             <Text style={styles.emptyLink}>generate one.</Text>
           </Link>
         </View>

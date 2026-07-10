@@ -74,7 +74,7 @@ export function usePreferencesWizard() {
 
     if (hasCompletedPreferences(storedPreferences)) {
       setInitialized(true);
-      router.replace('/(app)/onboarding');
+      router.replace('/(app)/roadmap-creation');
       return;
     }
 
@@ -196,7 +196,7 @@ export function usePreferencesWizard() {
         setValidationError(VALIDATION_MESSAGES.incomplete);
         return;
       }
-      router.replace('/(app)/onboarding');
+      router.replace('/(app)/roadmap-creation');
       return;
     }
 

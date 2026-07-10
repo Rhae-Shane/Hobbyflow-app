@@ -1,6 +1,6 @@
 import { hasCompletedPreferences } from '@/types/preferences.types';
 
-type PostAuthRoute = '/(app)/preferences' | '/(app)/onboarding' | '/(app)/(tabs)';
+type PostAuthRoute = '/(app)/preferences' | '/(app)/roadmap-creation' | '/(app)/(tabs)';
 
 export function getPostAuthRoute(options: {
   completedOnboardingAt: string | null;
@@ -14,9 +14,9 @@ export function getPostAuthRoute(options: {
     return '/(app)/preferences';
   }
   if (!options.hasHobbies) {
-    return '/(app)/onboarding';
+    return '/(app)/roadmap-creation';
   }
-  return '/(app)/onboarding';
+  return '/(app)/roadmap-creation';
 }
 
 export { hasCompletedPreferences };

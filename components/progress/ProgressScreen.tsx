@@ -73,7 +73,7 @@ export function ProgressScreen() {
         <Text style={styles.title}>Progress</Text>
         <View style={styles.emptyRow}>
           <Text style={styles.emptyText}>Complete onboarding first — </Text>
-          <Link href="/(app)/onboarding">
+          <Link href="/(app)/roadmap-creation">
             <Text style={styles.emptyLink}>get started.</Text>
           </Link>
         </View>

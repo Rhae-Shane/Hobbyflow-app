@@ -23,7 +23,7 @@ export function HobbiesList() {
     return (
       <View style={styles.emptyCard}>
         <Text style={styles.emptyText}>No hobbies yet.</Text>
-        <Pressable onPress={() => router.push('/(app)/onboarding?mode=add')}>
+        <Pressable onPress={() => router.push('/(app)/roadmap-creation?mode=add')}>
           <Text style={styles.emptyLink}>Add your first hobby</Text>
         </Pressable>
       </View>
@@ -43,7 +43,7 @@ export function HobbiesList() {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Your hobbies</Text>
-        <Pressable onPress={() => router.push('/(app)/onboarding?mode=add')}>
+        <Pressable onPress={() => router.push('/(app)/roadmap-creation?mode=add')}>
           <Text style={styles.addLink}>+ Add</Text>
         </Pressable>
       </View>

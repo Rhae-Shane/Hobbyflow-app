@@ -7,7 +7,7 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 
 function isOnboardingFlowSegment(segments: string[]): boolean {
   const leaf = segments[segments.length - 1];
-  return leaf === 'preferences' || leaf === 'onboarding';
+  return leaf === 'preferences' || leaf === 'roadmap-creation' || leaf === 'onboarding';
 }
 
 export default function AppLayout() {
@@ -44,6 +44,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="preferences" />
+      <Stack.Screen name="roadmap-creation" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="technique/[techniqueId]" />
