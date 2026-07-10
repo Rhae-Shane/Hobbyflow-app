@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AskAnythingSheet } from '@/components/ask/AskAnythingSheet';
 import { onboardingColors } from '@/constants/onboardingTokens';
 
@@ -17,9 +16,9 @@ const TAB_GLYPHS: Record<string, { active: string; inactive: string }> = {
 };
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
   const [askOpen, setAskOpen] = useState(false);
-  const bottomPad = Math.max(insets.bottom, 10);
+  // Root SafeAreaView already clears the home indicator; keep a small gap above it.
+  const bottomPad = 10;
 
   return (
     <>

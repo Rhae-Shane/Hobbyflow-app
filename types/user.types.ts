@@ -17,6 +17,10 @@ export type UserRow = {
   provider: string | null;
   email_verified: boolean;
   completed_onboarding_at: string | null;
+  username: string | null;
+  username_changed_at: string | null;
+  is_profile_public: boolean;
+  bio: string;
   created_at: string;
   updated_at: string;
 };

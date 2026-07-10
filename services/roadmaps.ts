@@ -8,6 +8,7 @@ import type {
   RoadmapDetailResponse,
   RoadmapRow,
 } from '@/types/roadmap.types';
+import type { GenerateLessonResponse } from '@/types/lessonContent.types';
 
 const log = createLogger('roadmaps');
 
@@ -36,6 +37,21 @@ export function generateRoadmapMindMap(roadmapId: string, options?: { force?: bo
     body: options ?? {},
     timeoutMs: 90_000,
   });
+}
+
+export function generateLesson(
+  roadmapId: string,
+  lessonId: string,
+  options?: { force?: boolean },
+) {
+  return apiRequest<GenerateLessonResponse>(
+    `/api/v1/roadmaps/${roadmapId}/lessons/${lessonId}/generate`,
+    {
+      method: 'POST',
+      body: options ?? {},
+      timeoutMs: 120_000,
+    },
+  );
 }
 
 export async function fetchActiveRoadmapForHobby(
@@ -74,4 +90,19 @@ export async function fetchUserRoadmaps(userId: string): Promise<RoadmapRow[]> {
   }
 
   return (data as RoadmapRow[]) ?? [];
+}
+
+export async function markLessonCompleted(lessonId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('roadmap_lessons')
+    .update({ status: 'completed', updated_at: new Date().toISOString() })
+    .eq('id', lessonId)
+    .in('status', ['ready', 'in_progress', 'completed']);
+
+  if (error) {
+    log.warn('Failed to mark lesson completed', { lessonId, error: error.message });
+    return false;
+  }
+
+  return true;
 }

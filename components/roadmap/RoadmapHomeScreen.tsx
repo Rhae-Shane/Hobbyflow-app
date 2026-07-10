@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
 import { LearningPathScroll } from '@/components/roadmap/LearningPathScroll';
+import { LessonPlayerScreen } from '@/components/roadmap/LessonPlayerScreen';
 import { MindMapCanvas } from '@/components/roadmap/MindMapCanvas';
 import {
   MindMapSidebar,
@@ -31,9 +32,13 @@ import { mindMapColors } from '@/lib/roadmap/mindMapLayout';
 import {
   fetchRoadmapDetail,
   fetchUserRoadmaps,
+  generateLesson,
   generateRoadmapMindMap,
+  markLessonCompleted,
 } from '@/services/roadmaps';
+import type { LessonNodeContent } from '@/types/lessonContent.types';
 import type { MindMapNode, RoadmapMindMap, RoadmapNodeRow, RoadmapRow } from '@/types/roadmap.types';
+import { useGamificationStore } from '@/store/useGamificationStore';
 
 function findNode(root: MindMapNode, id: string): MindMapNode | null {
   if (root.id === id) return root;
@@ -72,7 +77,12 @@ export function RoadmapHomeScreen({
   const [scale, setScale] = useState(1);
   const [mindMap, setMindMap] = useState<RoadmapMindMap | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<LearningPathNode | null>(null);
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const generateAttempted = useRef(false);
+  const currentStreak = useGamificationStore((s) => s.currentStreak);
+  const rating = useGamificationStore((s) => s.rating);
+  const onLessonCompleted = useGamificationStore((s) => s.onLessonCompleted);
 
   const detailQuery = useQuery({
     queryKey: ['roadmap-detail', id],
@@ -92,6 +102,22 @@ export function RoadmapHomeScreen({
       setMindMap(data.mindMap);
       setSelectedNodeId(data.mindMap.root.id);
       queryClient.invalidateQueries({ queryKey: ['roadmap-detail', id] });
+    },
+  });
+
+  const generateLessonMutation = useMutation({
+    mutationFn: (lessonId: string) => generateLesson(id!, lessonId),
+    onSuccess: async (result) => {
+      setGenerateError(null);
+      await queryClient.invalidateQueries({ queryKey: ['roadmap-detail', id] });
+      if (result.status === 'success') {
+        setPlayerOpen(true);
+      } else if (result.status === 'failed') {
+        setGenerateError(result.error?.message ?? 'Lesson generation failed');
+      }
+    },
+    onError: (error: Error) => {
+      setGenerateError(error.message || 'Lesson generation failed');
     },
   });
 
@@ -169,12 +195,46 @@ export function RoadmapHomeScreen({
 
   const { roadmap, nodes, lessons } = detailQuery.data;
 
+  const selectedLessonRow = selectedLesson
+    ? lessons.find((l) => l.id === selectedLesson.id)
+    : undefined;
+  const selectedLessonStatus =
+    selectedLessonRow?.status ?? selectedLesson?.lessonStatus ?? 'pending_content';
+  const selectedNodeContent = selectedLesson?.nodeId
+    ? (lessonById.get(selectedLesson.nodeId)?.content as LessonNodeContent | undefined)
+    : undefined;
+  const hasGeneratedPages = Boolean(
+    selectedNodeContent &&
+      Array.isArray(selectedNodeContent.pages) &&
+      selectedNodeContent.pages.length > 0,
+  );
+  const canStart =
+    hasGeneratedPages &&
+    (selectedLessonStatus === 'ready' ||
+      selectedLessonStatus === 'in_progress' ||
+      selectedLessonStatus === 'completed');
+  const needsGenerate =
+    selectedLessonStatus === 'pending_content' ||
+    selectedLessonStatus === 'failed' ||
+    (!hasGeneratedPages && selectedLessonStatus !== 'generating');
+
   const onNodePress = (item: LearningPathNode) => {
     if (item.visualState === 'locked' || item.nodeKind === 'section_review') {
       Alert.alert('Section review', 'Section review unlocks after you finish the lessons.');
       return;
     }
+    setGenerateError(null);
+    setPlayerOpen(false);
     setSelectedLesson(item);
+  };
+
+  const onGenerateOrStart = () => {
+    if (!selectedLesson) return;
+    if (canStart) {
+      setPlayerOpen(true);
+      return;
+    }
+    generateLessonMutation.mutate(selectedLesson.id);
   };
 
   const onOpenMenu = () => {
@@ -211,10 +271,10 @@ export function RoadmapHomeScreen({
         <Text style={styles.brand}>HobbyFlow</Text>
         <View style={styles.stats}>
           <View style={styles.statPill}>
-            <Text style={styles.statText}>🔥 0</Text>
+            <Text style={styles.statText}>🔥 {currentStreak}</Text>
           </View>
           <View style={styles.statPill}>
-            <Text style={styles.statText}>★ 0</Text>
+            <Text style={styles.statText}>★ {rating}</Text>
           </View>
         </View>
       </View>
@@ -247,7 +307,7 @@ export function RoadmapHomeScreen({
       )}
 
       <Modal
-        visible={selectedLesson !== null}
+        visible={selectedLesson !== null && !playerOpen}
         transparent
         animationType="slide"
         onRequestClose={() => setSelectedLesson(null)}
@@ -261,15 +321,75 @@ export function RoadmapHomeScreen({
             {selectedLesson?.sessionConfig?.meaning ? (
               <Text style={styles.sheetMeaning}>{selectedLesson.sessionConfig.meaning}</Text>
             ) : null}
-            <Text style={styles.sheetSoon}>
-              Lesson content generation coming soon — you can explore the concept map from the
-              journal button.
+            <Text style={styles.sheetSoon} testID="lesson-sheet-body">
+              {generateLessonMutation.isPending || selectedLessonStatus === 'generating'
+                ? 'Building your lesson with text, images, video, and audio…'
+                : needsGenerate
+                  ? 'This lesson will be generated when you start it.'
+                  : 'Your lesson is ready — text, images, video, and audio included.'}
             </Text>
+            {generateError ? <InlineError message={generateError} /> : null}
+            {generateLessonMutation.isPending || selectedLessonStatus === 'generating' ? (
+              <View style={styles.generatingRow}>
+                <ActivityIndicator color={onboardingColors.primaryText} />
+                <Text style={styles.sheetMeaning}>This can take up to a minute.</Text>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.primaryCta}
+                onPress={onGenerateOrStart}
+                testID="lesson-generate-cta"
+              >
+                <Text style={styles.primaryCtaText}>
+                  {canStart
+                    ? selectedLessonStatus === 'completed'
+                      ? 'REVIEW LESSON'
+                      : 'START LESSON'
+                    : selectedLessonStatus === 'failed'
+                      ? 'RETRY GENERATE'
+                      : 'GENERATE AND JUMP AHEAD'}
+                </Text>
+              </Pressable>
+            )}
             <Pressable style={styles.secondary} onPress={() => setSelectedLesson(null)}>
               <Text style={styles.secondaryText}>Close</Text>
             </Pressable>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={playerOpen && selectedLesson !== null}
+        animationType="slide"
+        onRequestClose={() => setPlayerOpen(false)}
+      >
+        {selectedNodeContent &&
+        Array.isArray(selectedNodeContent.pages) &&
+        selectedNodeContent.pages.length > 0 ? (
+          <LessonPlayerScreen
+            title={selectedLesson?.label ?? 'Lesson'}
+            content={selectedNodeContent}
+            onClose={() => {
+              const lessonId = selectedLesson?.id;
+              const hobbyId = roadmap.hobby_id;
+              setPlayerOpen(false);
+              setSelectedLesson(null);
+              if (lessonId && selectedLessonStatus !== 'completed') {
+                void markLessonCompleted(lessonId).then((ok) => {
+                  if (ok) {
+                    void queryClient.invalidateQueries({ queryKey: ['roadmap-detail', id] });
+                    void onLessonCompleted(hobbyId);
+                  }
+                });
+              }
+            }}
+          />
+        ) : (
+          <View style={styles.mapLoading}>
+            <ActivityIndicator color={onboardingColors.primaryText} />
+            <Text style={styles.mapLoadingText}>Opening your lesson…</Text>
+          </View>
+        )}
       </Modal>
 
       <Modal
@@ -456,6 +576,25 @@ const styles = StyleSheet.create({
     color: onboardingColors.textMuted,
     fontSize: 13,
     marginTop: spacing.xs,
+  },
+  generatingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  primaryCta: {
+    alignItems: 'center',
+    backgroundColor: onboardingColors.primaryText,
+    borderRadius: radii.card,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  primaryCtaText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   switcher: {
     backgroundColor: '#FFFFFF',

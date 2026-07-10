@@ -52,6 +52,10 @@ export default function AppLayout() {
       <Stack.Screen name="roadmap-preview/[id]" />
       <Stack.Screen name="roadmap/[id]" />
       <Stack.Screen name="technique/[techniqueId]" />
+      <Stack.Screen name="streak" />
+      <Stack.Screen name="pact" />
+      <Stack.Screen name="search" />
+      <Stack.Screen name="u/[username]" />
     </Stack>
   );
 }

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BootSpinner } from '@/components/BootSpinner';
 import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
 import { onboardingColors } from '@/constants/onboardingTokens';
@@ -10,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchUserRoadmaps } from '@/services/roadmaps';
 import type { RoadmapRow } from '@/types/roadmap.types';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
+import { useGamificationStore } from '@/store/useGamificationStore';
 
 function statusLabel(status: RoadmapRow['status']): string {
   if (status === 'active') return 'In progress';
@@ -19,9 +19,10 @@ function statusLabel(status: RoadmapRow['status']): string {
 
 export function CoursesScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const setSelectedRoadmapId = useRoadmapUiStore((s) => s.setSelectedRoadmapId);
+  const currentStreak = useGamificationStore((s) => s.currentStreak);
+  const rating = useGamificationStore((s) => s.rating);
 
   const openRoadmap = (rowId: string) => {
     setSelectedRoadmapId(rowId);
@@ -41,20 +42,15 @@ export function CoursesScreen() {
   const rows = query.data ?? [];
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + spacing.md },
-      ]}
-    >
+    <View style={[styles.container, { paddingTop: spacing.md }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Roadmaps</Text>
         <View style={styles.stats}>
           <View style={styles.statPill}>
-            <Text style={styles.statText}>🔥 0</Text>
+            <Text style={styles.statText}>🔥 {currentStreak}</Text>
           </View>
           <View style={styles.statPill}>
-            <Text style={styles.statText}>★ 0</Text>
+            <Text style={styles.statText}>★ {rating}</Text>
           </View>
         </View>
       </View>
@@ -63,7 +59,7 @@ export function CoursesScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: FLOATING_TAB_BAR_HEIGHT + insets.bottom + 24 },
+          { paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >

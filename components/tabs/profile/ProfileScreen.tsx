@@ -1,38 +1,58 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { InlineError } from '@/components/ui/InlineError';
+import { ClaimUsernameSheet } from '@/components/profile/ClaimUsernameSheet';
+import { LeagueBadge } from '@/components/profile/LeagueBadge';
 import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { InlineError } from '@/components/ui/InlineError';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
+import { useAuth } from '@/hooks/useAuth';
+import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { signOut } from '@/lib/auth';
 import { toAuthError } from '@/lib/errors';
-import { useAuth } from '@/hooks/useAuth';
+import { setProfilePublic } from '@/services/profileSearch';
+import { useGamificationStore } from '@/store/useGamificationStore';
+import { usePactStore } from '@/store/usePactStore';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useUserStore } from '@/store/useUserStore';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 const PROGRESS_LINKS = [
-  { id: 'weekly', label: 'Weekly Report', icon: '📅' },
-  { id: 'stats', label: 'Learning Stats', icon: '📊' },
-  { id: 'courses', label: 'Roadmap Stats', icon: '📖' },
+  { id: 'streak', label: 'My Streak', icon: '🔥', href: '/(app)/streak' },
+  { id: 'pact', label: 'The Pact', icon: '🤝', href: '/(app)/pact' },
+  { id: 'search', label: 'Find learners', icon: '🔍', href: '/(app)/search' },
+  { id: 'weekly', label: 'Weekly Report', icon: '📅', href: '/(app)/(tabs)/courses' },
+  { id: 'stats', label: 'Learning Stats', icon: '📊', href: '/(app)/(tabs)/courses' },
+  { id: 'courses', label: 'Roadmap Stats', icon: '📖', href: '/(app)/(tabs)/courses' },
 ] as const;
 
 export function ProfileScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const profile = usePlanStore((s) => s.profile);
-  const streakDays = usePlanStore((s) => s.streakDays);
   const clearSession = usePlanStore((s) => s.clearSession);
   const clearPreferencesSession = usePreferencesStore((s) => s.clearSession);
   const clearUserSession = useUserStore((s) => s.clearSession);
+  const username = useUserStore((s) => s.username);
+  const isProfilePublic = useUserStore((s) => s.isProfilePublic);
+  const setIsProfilePublic = useUserStore((s) => s.setIsProfilePublic);
+  const clearGamification = useGamificationStore((s) => s.clearSession);
+  const clearPact = usePactStore((s) => s.clearSession);
+  const currentStreak = useGamificationStore((s) => s.currentStreak);
+  const rating = useGamificationStore((s) => s.rating);
+  const pactsFulfilled = useGamificationStore((s) => s.pactsFulfilled);
+  const leagueId = useGamificationStore((s) => s.leagueId);
+  const leagues = useGamificationStore((s) => s.leagues);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [claimOpen, setClaimOpen] = useState(false);
 
-  const displayName = user?.email?.split('@')[0] || profile?.hobby || 'Learner';
-  const initial = displayName.charAt(0).toUpperCase();
+  const displayName = username
+    ? `@${username}`
+    : user?.email?.split('@')[0] || profile?.hobby || 'Learner';
+  const initial = (username || displayName).replace('@', '').charAt(0).toUpperCase();
+  const league = findLeague(leagueId, leagues);
 
   const handleSignOut = async () => {
     setSignOutError(null);
@@ -42,6 +62,8 @@ export function ProfileScreen() {
       clearSession();
       clearPreferencesSession();
       clearUserSession();
+      clearGamification();
+      clearPact();
       router.replace('/(auth)');
     } catch (error) {
       setSignOutError(toAuthError(error).message);
@@ -50,12 +72,34 @@ export function ProfileScreen() {
     }
   };
 
+  const onShare = async () => {
+    if (!username) {
+      setClaimOpen(true);
+      return;
+    }
+    if (!isProfilePublic) return;
+    await Share.share({
+      message: profileShareMessage(username, league.name, rating),
+    });
+  };
+
+  const togglePublic = async () => {
+    if (!user?.id) return;
+    const next = !isProfilePublic;
+    setIsProfilePublic(next);
+    try {
+      await setProfilePublic(user.id, next);
+    } catch {
+      setIsProfilePublic(!next);
+    }
+  };
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={{
-        paddingTop: insets.top + spacing.md,
-        paddingBottom: FLOATING_TAB_BAR_HEIGHT + insets.bottom + 24,
+        paddingTop: spacing.md,
+        paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24,
         paddingHorizontal: spacing.md,
         gap: spacing.md,
       }}
@@ -63,28 +107,56 @@ export function ProfileScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
-        <Pressable
-          style={styles.settingsBtn}
-          onPress={() => router.push('/(app)/preferences' as never)}
-          accessibilityLabel="Settings"
-        >
-          <Text style={styles.settingsGlyph}>⚙</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={styles.settingsBtn}
+            onPress={() => router.push('/(app)/search' as never)}
+            accessibilityLabel="Search profiles"
+          >
+            <Text style={styles.settingsGlyph}>🔍</Text>
+          </Pressable>
+          <Pressable
+            style={styles.settingsBtn}
+            onPress={() => router.push('/(app)/preferences' as never)}
+            accessibilityLabel="Settings"
+          >
+            <Text style={styles.settingsGlyph}>⚙</Text>
+          </Pressable>
+        </View>
       </View>
+
+      {!username ? (
+        <Pressable style={styles.claimBanner} onPress={() => setClaimOpen(true)}>
+          <Text style={styles.claimTitle}>Claim your username</Text>
+          <Text style={styles.claimSub}>Needed to appear in search and share your profile.</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.card}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
         <Text style={styles.name}>{displayName}</Text>
-        <View style={styles.statRow}>
-          <Text style={styles.statItem}>🔥 {streakDays} Days</Text>
+        <LeagueBadge leagueId={leagueId} leagues={leagues} />
+        <Pressable
+          style={styles.statRow}
+          onPress={() => router.push('/(app)/streak' as never)}
+          accessibilityLabel="Open streak page"
+        >
+          <Text style={styles.statItem}>🔥 {currentStreak}d</Text>
           <View style={styles.statDivider} />
-          <Text style={styles.statItem}>★ 0 XP</Text>
-        </View>
-        <Pressable style={styles.editBtn} onPress={() => router.push('/(app)/preferences' as never)}>
-          <Text style={styles.editText}>EDIT</Text>
+          <Text style={styles.statItem}>★ {rating}</Text>
+          <View style={styles.statDivider} />
+          <Text style={styles.statItem}>🤝 {pactsFulfilled} kept</Text>
         </Pressable>
+        <View style={styles.actionRow}>
+          <Pressable style={styles.editBtn} onPress={() => void onShare()}>
+            <Text style={styles.editText}>SHARE</Text>
+          </Pressable>
+          <Pressable style={styles.editBtn} onPress={() => void togglePublic()}>
+            <Text style={styles.editText}>{isProfilePublic ? 'PUBLIC' : 'PRIVATE'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>My Progress</Text>
@@ -93,7 +165,7 @@ export function ProfileScreen() {
           <Pressable
             key={item.id}
             style={[styles.listRow, index < PROGRESS_LINKS.length - 1 && styles.listRowBorder]}
-            onPress={() => router.push('/(app)/(tabs)/courses' as never)}
+            onPress={() => router.push(item.href as never)}
           >
             <Text style={styles.listIcon}>{item.icon}</Text>
             <Text style={styles.listLabel}>{item.label}</Text>
@@ -112,6 +184,15 @@ export function ProfileScreen() {
       <Pressable style={styles.signOut} onPress={handleSignOut} disabled={isSigningOut}>
         <Text style={styles.signOutText}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
       </Pressable>
+
+      {user?.id ? (
+        <ClaimUsernameSheet
+          visible={claimOpen}
+          userId={user.id}
+          onClose={() => setClaimOpen(false)}
+          onClaimed={() => setClaimOpen(false)}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -125,6 +206,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   title: {
     color: onboardingColors.text,
@@ -143,6 +228,23 @@ const styles = StyleSheet.create({
   },
   settingsGlyph: {
     fontSize: 18,
+  },
+  claimBanner: {
+    backgroundColor: '#E8F6FE',
+    borderColor: onboardingColors.primaryBorder,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    gap: 4,
+    padding: spacing.md,
+  },
+  claimTitle: {
+    color: onboardingColors.primaryText,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  claimSub: {
+    color: onboardingColors.textMuted,
+    fontSize: 13,
   },
   card: {
     alignItems: 'center',
@@ -174,7 +276,9 @@ const styles = StyleSheet.create({
   statRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
   },
   statItem: {
     color: onboardingColors.textMuted,
@@ -186,11 +290,15 @@ const styles = StyleSheet.create({
     height: 16,
     width: 1,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   editBtn: {
     borderColor: onboardingColors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
-    marginTop: spacing.xs,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },

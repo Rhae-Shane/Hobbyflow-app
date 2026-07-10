@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -7,7 +8,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
 import {
   GENERATION_SUGGESTIONS,
@@ -30,8 +30,12 @@ function SuggestionCard({
   return (
     <Pressable style={styles.card} onPress={onPress} accessibilityLabel={item.title}>
       <View style={[styles.cardArt, { backgroundColor: item.accent }]}>
-        <View style={styles.cardArtBlock} />
-        <View style={[styles.cardArtBlock, styles.cardArtBlockSmall]} />
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.cardImage}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
       </View>
       <View style={styles.cardBody}>
         <View style={styles.categoryPill}>
@@ -47,7 +51,6 @@ function SuggestionCard({
 }
 
 export function GenerationHomeScreen({ onStart }: Props) {
-  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
 
   const submit = () => {
@@ -61,8 +64,8 @@ export function GenerationHomeScreen({ onStart }: Props) {
       style={[
         styles.screen,
         {
-          paddingTop: insets.top + spacing.md,
-          paddingBottom: FLOATING_TAB_BAR_HEIGHT + Math.max(insets.bottom, 8),
+          paddingTop: spacing.md,
+          paddingBottom: FLOATING_TAB_BAR_HEIGHT + 8,
         },
       ]}
     >
@@ -169,20 +172,12 @@ const styles = StyleSheet.create({
     width: 200,
   },
   cardArt: {
-    height: 120,
-    justifyContent: 'flex-end',
-    padding: spacing.md,
+    height: 132,
+    overflow: 'hidden',
   },
-  cardArtBlock: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderRadius: 8,
-    height: 36,
-    marginBottom: 8,
-    width: '70%',
-  },
-  cardArtBlockSmall: {
-    height: 24,
-    width: '45%',
+  cardImage: {
+    height: '100%',
+    width: '100%',
   },
   cardBody: {
     gap: 8,

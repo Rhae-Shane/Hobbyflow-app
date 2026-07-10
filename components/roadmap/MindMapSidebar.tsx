@@ -21,6 +21,8 @@ function statusLabel(status: LinkedLessonItem['status']): string {
   if (status === 'completed') return 'Completed';
   if (status === 'in_progress') return 'In progress';
   if (status === 'ready') return 'Ready';
+  if (status === 'generating') return 'Generating';
+  if (status === 'failed') return 'Failed';
   return 'Not started';
 }
 

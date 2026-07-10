@@ -46,7 +46,7 @@ export type RoadmapNodeRow = {
   user_id: string;
   type: 'Section' | 'Lesson';
   name: string;
-  content: Record<string, unknown>;
+  content: Record<string, unknown> | import('./lessonContent.types').LessonNodeContent;
   metadata: Record<string, unknown>;
 };
 
@@ -56,7 +56,7 @@ export type RoadmapLessonRow = {
   node_id: string;
   user_id: string;
   path_order: number;
-  status: 'pending_content' | 'ready' | 'in_progress' | 'completed';
+  status: import('./lessonContent.types').RoadmapLessonStatus;
   session_config: {
     name?: string;
     hook?: string;

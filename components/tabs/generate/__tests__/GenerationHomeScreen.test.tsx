@@ -6,12 +6,13 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 describe('GenerationHomeScreen', () => {
-  it('renders Inspo-style landing copy and suggestions', () => {
+  it('renders Inspo-style landing copy and hobby suggestions', () => {
     const onStart = jest.fn();
     const { getByText } = render(<GenerationHomeScreen onStart={onStart} />);
 
     expect(getByText('What do you want to learn?')).toBeTruthy();
-    expect(getByText('A Philosophy of Software Design')).toBeTruthy();
+    expect(getByText('Acoustic Guitar Basics')).toBeTruthy();
+    expect(getByText('Home Cooking Essentials')).toBeTruthy();
   });
 
   it('starts chat from composer text', () => {
@@ -27,9 +28,9 @@ describe('GenerationHomeScreen', () => {
     const onStart = jest.fn();
     const { getByText } = render(<GenerationHomeScreen onStart={onStart} />);
 
-    fireEvent.press(getByText('A Philosophy of Software Design'));
+    fireEvent.press(getByText('Acoustic Guitar Basics'));
     expect(onStart).toHaveBeenCalledWith(
-      expect.stringContaining('software design'),
+      expect.stringContaining('acoustic guitar'),
     );
   });
 });

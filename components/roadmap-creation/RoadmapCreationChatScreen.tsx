@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BootSpinner } from '@/components/BootSpinner';
 import { InlineError } from '@/components/ui/InlineError';
 import { ChatBubble } from '@/components/roadmap-creation/ChatBubble';
@@ -65,7 +64,6 @@ export function RoadmapCreationChatScreen({
   onBack,
 }: RoadmapCreationChatScreenProps = {}) {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const resolvedVariant: 'onboarding' | 'add' =
     variant ?? (mode === 'add' ? 'add' : 'onboarding');
@@ -91,9 +89,7 @@ export function RoadmapCreationChatScreen({
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [showChangesModal, setShowChangesModal] = useState(false);
 
-  const bottomPad = embeddedInTabs
-    ? FLOATING_TAB_BAR_HEIGHT + Math.max(insets.bottom, 8)
-    : spacing.lg;
+  const bottomPad = embeddedInTabs ? FLOATING_TAB_BAR_HEIGHT + 8 : spacing.lg;
 
   useEffect(() => {
     // Only bounce completed users off the standalone onboarding stack route.
@@ -282,7 +278,7 @@ export function RoadmapCreationChatScreen({
       <View
         style={[
           styles.container,
-          { paddingBottom: bottomPad, paddingTop: insets.top + spacing.sm },
+          { paddingBottom: bottomPad, paddingTop: spacing.sm },
         ]}
       >
         {onBack ? (

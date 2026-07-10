@@ -11,7 +11,7 @@ export async function fetchUser(userId: string): Promise<UserRow | null> {
   const { data, error } = await supabase
     .from('users')
     .select(
-      'id, email, full_name, avatar_url, provider, email_verified, completed_onboarding_at, created_at, updated_at',
+      'id, email, full_name, avatar_url, provider, email_verified, completed_onboarding_at, username, username_changed_at, is_profile_public, bio, created_at, updated_at',
     )
     .eq('id', userId)
     .maybeSingle();

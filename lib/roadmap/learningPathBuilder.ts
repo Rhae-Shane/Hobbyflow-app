@@ -22,6 +22,7 @@ export type LearningPathNode = {
   visualState: PathNodeVisualState;
   pathOrder: number;
   staggerIndex: number;
+  lessonStatus?: RoadmapLessonRow['status'];
   sessionConfig?: {
     name?: string;
     hook?: string;
@@ -138,6 +139,7 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
         visualState: visualStateForLesson(entry.lessonRow.id, entry.lessonRow.status, currentId),
         pathOrder: entry.lessonRow.path_order,
         staggerIndex: staggerOffset(globalStagger),
+        lessonStatus: entry.lessonRow.status,
         sessionConfig: entry.lessonRow.session_config,
       });
       globalStagger += 1;
@@ -154,6 +156,7 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
         visualState: visualStateForLesson(entry.lessonRow.id, entry.lessonRow.status, currentId),
         pathOrder: entry.lessonRow.path_order,
         staggerIndex: staggerOffset(globalStagger),
+        lessonStatus: entry.lessonRow.status,
         sessionConfig: entry.lessonRow.session_config,
       });
       globalStagger += 1;

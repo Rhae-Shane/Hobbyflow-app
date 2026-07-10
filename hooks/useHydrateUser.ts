@@ -7,6 +7,7 @@ const log = createLogger('hydrate-user');
 
 export function useHydrateUser(userId: string | undefined, isAuthenticated: boolean) {
   const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
+  const setProfileFields = useUserStore((s) => s.setProfileFields);
   const setHydrationStatus = useUserStore((s) => s.setHydrationStatus);
 
   useEffect(() => {
@@ -24,9 +25,15 @@ export function useHydrateUser(userId: string | undefined, isAuthenticated: bool
       .then((row) => {
         if (cancelled) return;
         setCompletedOnboardingAt(row?.completed_onboarding_at ?? null);
+        setProfileFields({
+          username: row?.username ?? null,
+          isProfilePublic: row?.is_profile_public ?? true,
+          bio: row?.bio ?? '',
+        });
         log.info('User row hydrated', {
           userId,
           completedOnboarding: Boolean(row?.completed_onboarding_at),
+          hasUsername: Boolean(row?.username),
         });
       })
       .catch((err: unknown) => {
@@ -45,5 +52,5 @@ export function useHydrateUser(userId: string | undefined, isAuthenticated: bool
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, setCompletedOnboardingAt, setHydrationStatus, userId]);
+  }, [isAuthenticated, setCompletedOnboardingAt, setHydrationStatus, setProfileFields, userId]);
 }
