@@ -1,3 +1,6 @@
-import { ProgressScreen } from '@/components/progress/ProgressScreen';
+import { Redirect } from 'expo-router';
 
-export default ProgressScreen;
+/** Legacy Progress tab → Profile (Spec 16). */
+export default function ProgressRedirect() {
+  return <Redirect href="/(app)/(tabs)/profile" />;
+}

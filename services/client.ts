@@ -25,6 +25,8 @@ type RequestOptions = {
   method?: 'GET' | 'POST';
   body?: unknown;
   auth?: boolean;
+  /** Override default 30s timeout (e.g. materialize LLM calls). */
+  timeoutMs?: number;
 };
 
 async function parseResponseBody(response: Response): Promise<ApiErrorBody> {
@@ -55,7 +57,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   log.debug('API request', { method, path });
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
 

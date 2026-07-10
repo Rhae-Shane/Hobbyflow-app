@@ -371,6 +371,7 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
   return {
     messages,
     flowState,
+    conversationId,
     isLoading,
     error,
     inputText,

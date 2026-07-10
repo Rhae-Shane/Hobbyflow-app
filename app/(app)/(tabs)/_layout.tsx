@@ -1,12 +1,13 @@
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { BootSpinner } from '@/components/BootSpinner';
+import { FloatingTabBar } from '@/components/navigation/FloatingTabBar';
 import { usePlanStoreHydrated } from '@/hooks/usePlanStoreHydrated';
 import { getPostAuthRoute, hasCompletedPreferences } from '@/lib/routing';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
-import { colors } from '@/constants/tokens';
+import { onboardingColors } from '@/constants/onboardingTokens';
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -55,15 +56,25 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        sceneStyle: { backgroundColor: onboardingColors.background },
+        tabBarStyle: {
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 90,
+          position: 'absolute',
+        },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Roadmap' }} />
-      <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
+      <Tabs.Screen name="index" options={{ title: 'Roadmap', tabBarLabel: 'Roadmap' }} />
+      <Tabs.Screen name="generate" options={{ title: 'Generation', tabBarLabel: 'Generation' }} />
+      <Tabs.Screen name="courses" options={{ title: 'Courses', tabBarLabel: 'Courses' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
+      {/* Keep file for deep links / old Progress tab redirects if needed */}
+      <Tabs.Screen name="progress" options={{ href: null }} />
     </Tabs>
   );
 }

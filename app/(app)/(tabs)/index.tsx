@@ -1,3 +1,3 @@
-import { RoadmapScreen } from '@/components/roadmap/RoadmapScreen';
+import { ActiveRoadmapTab } from '@/components/tabs/roadmap/ActiveRoadmapTab';
 
-export default RoadmapScreen;
+export default ActiveRoadmapTab;

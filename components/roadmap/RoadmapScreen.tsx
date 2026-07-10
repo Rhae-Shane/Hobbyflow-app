@@ -12,6 +12,7 @@ import {
   getTodaysFocus,
   usePlanStore,
 } from '@/store/usePlanStore';
+import { fetchActiveRoadmapForHobby } from '@/services/roadmaps';
 import type { Technique } from '@/types/plan.types';
 
 function TechniqueCardSkeleton() {
@@ -30,7 +31,23 @@ export function RoadmapScreen() {
   const hobbies = usePlanStore((s) => s.hobbies);
   const activeHobbyId = usePlanStore((s) => s.activeHobbyId);
   const streakDays = usePlanStore((s) => s.streakDays);
+  const userId = usePlanStore((s) => s.userId);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [structuredRoadmapId, setStructuredRoadmapId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId || !activeHobbyId) {
+      setStructuredRoadmapId(null);
+      return;
+    }
+    let cancelled = false;
+    fetchActiveRoadmapForHobby(userId, activeHobbyId).then((row) => {
+      if (!cancelled) setStructuredRoadmapId(row?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeHobbyId, userId]);
 
   const techniques = useMemo(
     () => [...(plan?.techniques ?? [])].sort((a, b) => a.order - b.order),
@@ -58,16 +75,28 @@ export function RoadmapScreen() {
     return (
       <View style={styles.container}>
         <HobbySwitcher />
-        <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>
-            {activeHobby
-              ? `No roadmap for ${activeHobby.name} yet — `
-              : 'No roadmap yet — '}
-          </Text>
-          <Link href="/(app)/roadmap-creation?mode=add">
-            <Text style={styles.emptyLink}>generate one.</Text>
-          </Link>
-        </View>
+        {structuredRoadmapId ? (
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>Open your structured path — </Text>
+            <Text
+              style={styles.emptyLink}
+              onPress={() => router.push(`/(app)/roadmap/${structuredRoadmapId}`)}
+            >
+              view roadmap.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>
+              {activeHobby
+                ? `No roadmap for ${activeHobby.name} yet — `
+                : 'No roadmap yet — '}
+            </Text>
+            <Link href="/(app)/(tabs)/generate">
+              <Text style={styles.emptyLink}>generate one.</Text>
+            </Link>
+          </View>
+        )}
       </View>
     );
   }
