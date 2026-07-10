@@ -67,7 +67,7 @@ export function GoalSuggestionCard({ goalCard, onChange, onConfirm, isLoading = 
         onPress={onConfirm}
         disabled={isLoading}
       >
-        <Text style={styles.ctaText}>LOOKS GOOD, CREATE ROADMAP</Text>
+        <Text style={styles.ctaText}>LOOKS GOOD, CONTINUE</Text>
       </Pressable>
     </View>
   );

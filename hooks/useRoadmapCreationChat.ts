@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildPreferencesAiContext } from '@/constants/preferences';
 import { formatClarificationAnswer } from '@/lib/roadmap-creation/formatClarificationAnswer';
 import { sendRoadmapCreationMessage } from '@/services/roadmapCreationChat';
 import {
@@ -6,11 +7,14 @@ import {
   fetchActiveRoadmapCreationConversation,
   upsertRoadmapCreationConversation,
 } from '@/services/chatConversations';
+import type { UserPreferences } from '@/types/preferences.types';
 import type {
   ClarificationResponse,
   DisplayMessage,
   GoalCardState,
   GoalSuggestionResponse,
+  LessonPlanResponse,
+  LessonPlanState,
   RoadmapCreationFlowState,
 } from '@/types/roadmapCreation.types';
 
@@ -28,13 +32,22 @@ function goalCardFromResponse(response: GoalSuggestionResponse): GoalCardState {
   };
 }
 
+function lessonPlanFromResponse(response: LessonPlanResponse): LessonPlanState {
+  return {
+    courseTitle: response.courseTitle,
+    sections: response.sections,
+    stage: response.stage,
+    lessonPlanId: response.lessonPlanId,
+  };
+}
+
 type Options = {
   userId: string | undefined;
-  userRoles: string[];
+  preferences: UserPreferences | null;
   isFirstRoadmap: boolean;
 };
 
-export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Options) {
+export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: Options) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [flowState, setFlowState] = useState<RoadmapCreationFlowState>('collecting-input');
   const [conversationId, setConversationId] = useState<string | undefined>();
@@ -44,8 +57,18 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
   const [selectedChips, setSelectedChips] = useState<string[]>([]);
   const [mcqFreeText, setMcqFreeText] = useState('');
   const [goalCard, setGoalCard] = useState<GoalCardState | null>(null);
+  const [lessonPlan, setLessonPlan] = useState<LessonPlanState | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [isRequestingOutline, setIsRequestingOutline] = useState(false);
   const sendingRef = useRef(false);
+  const goalCardRef = useRef<GoalCardState | null>(null);
+  const lessonPlanRef = useRef<LessonPlanState | null>(null);
+
+  goalCardRef.current = goalCard;
+  lessonPlanRef.current = lessonPlan;
+
+  const userRoles = preferences?.userRole ? [preferences.userRole] : [];
+  const learnerContextSummary = preferences ? buildPreferencesAiContext(preferences) : '';
 
   const activeClarification = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -58,10 +81,16 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
     return null;
   }, [messages]);
 
-  const showGoalCard = flowState === 'confirming-goal' && goalCard !== null;
+  const showGoalCard = flowState === 'confirming-goal' && goalCard !== null && !lessonPlan;
+  const showLessonPlan = flowState === 'reviewing-outline' && lessonPlan !== null;
 
   const persistConversation = useCallback(
-    async (nextMessages: DisplayMessage[], nextFlowState: RoadmapCreationFlowState) => {
+    async (
+      nextMessages: DisplayMessage[],
+      nextFlowState: RoadmapCreationFlowState,
+      nextGoalCard?: GoalCardState | null,
+      nextLessonPlan?: LessonPlanState | null,
+    ) => {
       if (!userId) return;
       const title = nextMessages.find((m) => m.role === 'user')?.content ?? 'New roadmap';
       const id = await upsertRoadmapCreationConversation({
@@ -70,23 +99,30 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
         title,
         messages: nextMessages,
         flowState: nextFlowState,
+        preferencesSnapshot: preferences,
+        learnerContextSummary,
+        goalCard: nextGoalCard ?? goalCardRef.current,
+        lessonPlan: nextLessonPlan ?? lessonPlanRef.current,
       });
       if (id && id !== conversationId) {
         setConversationId(id);
       }
     },
-    [conversationId, userId],
+    [conversationId, learnerContextSummary, preferences, userId],
   );
 
   const applyAssistantResponse = useCallback(
     async (
-      response: ClarificationResponse | GoalSuggestionResponse,
+      response: ClarificationResponse | GoalSuggestionResponse | LessonPlanResponse,
       nextMessages: DisplayMessage[],
     ) => {
       const assistantMessage: DisplayMessage = {
         id: newId(),
         role: 'assistant',
-        content: response.message,
+        content:
+          response.type === 'lesson_plan'
+            ? response.message ?? `Here's your outline for ${response.courseTitle}.`
+            : response.message,
         type: response.type,
         metadata:
           response.type === 'clarification'
@@ -94,13 +130,20 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
                 quickReplies: response.quickReplies,
                 multiSelect: response.multiSelect,
               }
-            : {
-                suggestedHobby: response.suggestedHobby,
-                suggestedName: response.suggestedName,
-                suggestedGoal: response.suggestedGoal,
-                suggestedBackground: response.suggestedBackground,
-                suggestedLevel: response.suggestedLevel,
-              },
+            : response.type === 'goal_suggestion'
+              ? {
+                  suggestedHobby: response.suggestedHobby,
+                  suggestedName: response.suggestedName,
+                  suggestedGoal: response.suggestedGoal,
+                  suggestedBackground: response.suggestedBackground,
+                  suggestedLevel: response.suggestedLevel,
+                }
+              : {
+                  courseTitle: response.courseTitle,
+                  sections: response.sections,
+                  stage: response.stage,
+                  lessonPlanId: response.lessonPlanId,
+                },
       };
 
       const merged = [...nextMessages, assistantMessage];
@@ -109,17 +152,28 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
       setSelectedChips([]);
       setMcqFreeText('');
 
+      let nextGoal = goalCardRef.current;
+      let nextPlan = lessonPlanRef.current;
+
       if (response.type === 'goal_suggestion') {
-        setGoalCard(goalCardFromResponse(response));
+        nextGoal = goalCardFromResponse(response);
+        nextPlan = null;
+        setGoalCard(nextGoal);
+        setLessonPlan(null);
       }
 
-      await persistConversation(merged, response.flowState);
+      if (response.type === 'lesson_plan') {
+        nextPlan = lessonPlanFromResponse(response);
+        setLessonPlan(nextPlan);
+      }
+
+      await persistConversation(merged, response.flowState, nextGoal, nextPlan);
     },
     [persistConversation],
   );
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { intent?: 'chat' | 'generate_outline' }) => {
       const trimmed = text.trim();
       if (!trimmed || sendingRef.current) return;
 
@@ -143,6 +197,8 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
         content: m.content,
       }));
 
+      const intent = options?.intent ?? 'chat';
+
       try {
         const response = await sendRoadmapCreationMessage({
           message: trimmed,
@@ -151,6 +207,17 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
           userRoles,
           isFirstRoadmap,
           conversationId,
+          intent,
+          learnerContextSummary: learnerContextSummary || undefined,
+          currentLessonPlan:
+            intent === 'generate_outline' && lessonPlan
+              ? {
+                  courseTitle: lessonPlan.courseTitle,
+                  sections: lessonPlan.sections,
+                  stage: lessonPlan.stage,
+                  lessonPlanId: lessonPlan.lessonPlanId,
+                }
+              : undefined,
           roadmapName: goalCard?.suggestedName,
           roadmapGoal: goalCard?.suggestedGoal,
           roadmapBackground: goalCard?.suggestedBackground,
@@ -171,9 +238,37 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
       flowState,
       goalCard,
       isFirstRoadmap,
+      learnerContextSummary,
+      lessonPlan,
       messages,
       userRoles,
     ],
+  );
+
+  const requestLessonPlan = useCallback(async () => {
+    if (!goalCard || sendingRef.current) return;
+    setIsRequestingOutline(true);
+    try {
+      await sendMessage('Looks good — please create the roadmap outline.', {
+        intent: 'generate_outline',
+      });
+    } finally {
+      setIsRequestingOutline(false);
+    }
+  }, [goalCard, sendMessage]);
+
+  const requestOutlineChanges = useCallback(
+    async (changeRequest: string) => {
+      const trimmed = changeRequest.trim();
+      if (!trimmed || !goalCard || sendingRef.current) return;
+      setIsRequestingOutline(true);
+      try {
+        await sendMessage(trimmed, { intent: 'generate_outline' });
+      } finally {
+        setIsRequestingOutline(false);
+      }
+    },
+    [goalCard, sendMessage],
   );
 
   const handleChipSelect = useCallback(
@@ -225,14 +320,34 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
         setConversationId(row.id);
         setFlowState((row.context?.flowState as RoadmapCreationFlowState) ?? 'clarifying');
 
+        const contextGoal = row.context?.goalCard as GoalCardState | null | undefined;
         const lastGoal = [...restored].reverse().find((m) => m.type === 'goal_suggestion');
-        if (lastGoal?.metadata) {
+        if (contextGoal?.suggestedName) {
+          setGoalCard(contextGoal);
+        } else if (lastGoal?.metadata) {
           setGoalCard({
             suggestedHobby: lastGoal.metadata.suggestedHobby ?? '',
             suggestedName: lastGoal.metadata.suggestedName ?? '',
             suggestedGoal: lastGoal.metadata.suggestedGoal ?? '',
             suggestedBackground: lastGoal.metadata.suggestedBackground ?? '',
             suggestedLevel: lastGoal.metadata.suggestedLevel ?? 'beginner',
+          });
+        }
+
+        const contextPlan = row.context?.lessonPlan as LessonPlanState | null | undefined;
+        const lastPlan = [...restored].reverse().find((m) => m.type === 'lesson_plan');
+        if (contextPlan?.courseTitle && contextPlan.sections && contextPlan.lessonPlanId) {
+          setLessonPlan(contextPlan);
+        } else if (
+          lastPlan?.metadata?.courseTitle &&
+          lastPlan.metadata.sections &&
+          lastPlan.metadata.lessonPlanId
+        ) {
+          setLessonPlan({
+            courseTitle: lastPlan.metadata.courseTitle,
+            sections: lastPlan.metadata.sections,
+            stage: 'outline',
+            lessonPlanId: lastPlan.metadata.lessonPlanId,
           });
         }
 
@@ -265,10 +380,15 @@ export function useRoadmapCreationChat({ userId, userRoles, isFirstRoadmap }: Op
     setMcqFreeText,
     goalCard,
     setGoalCard,
+    lessonPlan,
     showGoalCard,
+    showLessonPlan,
     activeClarification,
     hydrated,
     sendMessage,
+    requestLessonPlan,
+    requestOutlineChanges,
+    isRequestingOutline,
     handleChipSelect,
     handleMcqSend,
     archiveConversation,

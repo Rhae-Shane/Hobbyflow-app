@@ -1,6 +1,11 @@
 import { createLogger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
-import type { DisplayMessage } from '@/types/roadmapCreation.types';
+import type {
+  DisplayMessage,
+  GoalCardState,
+  LessonPlanState,
+} from '@/types/roadmapCreation.types';
+import type { UserPreferences } from '@/types/preferences.types';
 
 const log = createLogger('chatConversations');
 
@@ -51,6 +56,10 @@ export async function upsertRoadmapCreationConversation(options: {
   title: string;
   messages: DisplayMessage[];
   flowState: string;
+  preferencesSnapshot?: UserPreferences | null;
+  learnerContextSummary?: string;
+  goalCard?: GoalCardState | null;
+  lessonPlan?: LessonPlanState | null;
 }): Promise<string | null> {
   const now = new Date().toISOString();
   const payload = {
@@ -61,6 +70,10 @@ export async function upsertRoadmapCreationConversation(options: {
       origin: 'hobby',
       workflow: 'roadmap_creation',
       flowState: options.flowState,
+      preferencesSnapshot: options.preferencesSnapshot ?? null,
+      learnerContextSummary: options.learnerContextSummary ?? null,
+      goalCard: options.goalCard ?? null,
+      lessonPlan: options.lessonPlan ?? null,
     },
     message_count: options.messages.length,
     last_message_at: now,

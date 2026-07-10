@@ -15,6 +15,10 @@ import { InlineError } from '@/components/ui/InlineError';
 import { ChatBubble } from '@/components/roadmap-creation/ChatBubble';
 import { ChatInputBar } from '@/components/roadmap-creation/ChatInputBar';
 import { GoalSuggestionCard } from '@/components/roadmap-creation/GoalSuggestionCard';
+import {
+  LessonPlanOutlineCard,
+  RequestChangesModal,
+} from '@/components/roadmap-creation/LessonPlanOutlineCard';
 import { McqClarificationBlock } from '@/components/roadmap-creation/McqClarificationBlock';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { spacing } from '@/constants/tokens';
@@ -24,12 +28,15 @@ import { useRoadmapCreationChat } from '@/hooks/useRoadmapCreationChat';
 import { buildPlanRequestFromGoalCard } from '@/lib/roadmap-creation/buildPlanFromGoal';
 import { getStarterPlan } from '@/lib/starterPlans';
 import { planRequestSchema } from '@/lib/validation/planRequest.schema';
+import { fetchUserHobbies } from '@/services/hobbies';
 import { fetchUserPreferences } from '@/services/preferences';
 import { useGeneratePlan } from '@/services/queries';
 import { completeOnboarding as markOnboardingComplete } from '@/services/user';
+import { upsertUserPlan } from '@/services/userState';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
+import type { OnboardingProfile, Plan } from '@/types/plan.types';
 
 const LOADING_MESSAGES = [
   'Generating your roadmap...',
@@ -46,19 +53,15 @@ export function RoadmapCreationChatScreen() {
   const { user } = useAuth();
   const isUserHydrated = useIsUserHydrated();
   const hobbies = usePlanStore((s) => s.hobbies);
-  const setPlan = usePlanStore((s) => s.setPlan);
-  const setProfile = usePlanStore((s) => s.setProfile);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
   const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
   const preferences = usePreferencesStore((s) => s.preferences);
   const setPreferences = usePreferencesStore((s) => s.setPreferences);
   const generatePlan = useGeneratePlan();
 
-  const userRoles = preferences?.userRole ? [preferences.userRole] : [];
-
   const chat = useRoadmapCreationChat({
     userId: user?.id,
-    userRoles,
+    preferences,
     isFirstRoadmap: !isAddMode && hobbies.length === 0,
   });
 
@@ -66,6 +69,7 @@ export function RoadmapCreationChatScreen() {
   const [generationFailed, setGenerationFailed] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [showChangesModal, setShowChangesModal] = useState(false);
   const lastPlanRequestRef = useRef<ReturnType<typeof planRequestSchema.safeParse>['data'] | null>(
     null,
   );
@@ -89,11 +93,43 @@ export function RoadmapCreationChatScreen() {
     return fetched;
   };
 
+  const persistPlanAndArchive = async (plan: Plan, profile: OnboardingProfile) => {
+    if (isAddMode) {
+      usePlanStore.getState().saveCurrentHobbySnapshot();
+    }
+
+    usePlanStore.setState({ plan, profile });
+
+    let hobbyId: string | undefined;
+    if (user) {
+      const streakDays = usePlanStore.getState().streakDays;
+      const synced = await upsertUserPlan(user.id, {
+        plan,
+        profile,
+        streakDays,
+      });
+      hobbyId = synced.hobbyId;
+      const nextHobbies = await fetchUserHobbies(user.id);
+      usePlanStore.setState({
+        hobbies: nextHobbies,
+        activeHobbyId: hobbyId,
+      });
+    }
+
+    await chat.archiveConversation(hobbyId);
+  };
+
   const finishWithPlan = async () => {
     if (!chat.goalCard) return;
 
     const prefs = await resolvePreferences();
-    const planInput = buildPlanRequestFromGoalCard(chat.goalCard, prefs, chat.messages);
+    const planInput = buildPlanRequestFromGoalCard(
+      chat.goalCard,
+      prefs,
+      chat.messages,
+      '30 min/day',
+      chat.lessonPlan,
+    );
     const parsed = planRequestSchema.safeParse(planInput);
     if (!parsed.success) {
       chat.setInputText('');
@@ -121,18 +157,12 @@ export function RoadmapCreationChatScreen() {
 
     try {
       const plan = await generatePlan.mutateAsync(parsed.data);
-      if (isAddMode) {
-        usePlanStore.getState().saveCurrentHobbySnapshot();
-      }
-      setPlan(plan);
-      setProfile({
+      await persistPlanAndArchive(plan, {
         hobby: parsed.data.hobby,
         level: parsed.data.level,
         goal: parsed.data.goal ?? '',
         timeBudget: parsed.data.timeBudget,
       });
-
-      await chat.archiveConversation();
 
       if (!isAddMode && user) {
         await markOnboardingComplete(user.id);
@@ -154,22 +184,22 @@ export function RoadmapCreationChatScreen() {
     if (!starter) return;
 
     setGenerationFailed(false);
-    if (isAddMode) {
-      usePlanStore.getState().saveCurrentHobbySnapshot();
-    }
-    setPlan(starter);
-    setProfile({
+    await persistPlanAndArchive(starter, {
       hobby: payload.hobby,
       level: payload.level,
       goal: payload.goal ?? '',
       timeBudget: payload.timeBudget,
     });
-    await chat.archiveConversation();
     if (!isAddMode && user) {
       await markOnboardingComplete(user.id);
       setCompletedOnboardingAt(new Date().toISOString());
     }
     router.replace('/(app)/(tabs)');
+  };
+
+  const handleSubmitChanges = async (change: string) => {
+    setShowChangesModal(false);
+    await chat.requestOutlineChanges(change);
   };
 
   const inputPlaceholder = chat.showGoalCard
@@ -180,6 +210,7 @@ export function RoadmapCreationChatScreen() {
 
   const showMcq =
     !chat.showGoalCard &&
+    !chat.showLessonPlan &&
     chat.activeClarification?.metadata?.quickReplies &&
     !chat.isLoading;
 
@@ -189,6 +220,57 @@ export function RoadmapCreationChatScreen() {
 
   if (!chat.hydrated) {
     return <BootSpinner />;
+  }
+
+  if (chat.showLessonPlan && chat.lessonPlan) {
+    return (
+      <View style={styles.container}>
+        {chat.isRequestingOutline ? (
+          <View style={styles.outlineLoading}>
+            <ActivityIndicator color={onboardingColors.primary} size="large" />
+            <Text style={styles.loadingText}>Updating your outline…</Text>
+          </View>
+        ) : (
+          <LessonPlanOutlineCard
+            lessonPlan={chat.lessonPlan}
+            goalCard={chat.goalCard}
+            onRequestChanges={() => setShowChangesModal(true)}
+            onConfirm={() => void finishWithPlan()}
+            isLoading={generatePlan.isPending}
+          />
+        )}
+
+        {duplicateError ? <InlineError message={duplicateError} /> : null}
+        {chat.error ? <InlineError message={chat.error} /> : null}
+
+        {generationFailed ? (
+          <View style={styles.failureCard}>
+            <InlineError message={GENERATION_ERROR_MESSAGE} />
+            <View style={styles.failureActions}>
+              <Pressable style={styles.secondaryButton} onPress={() => void finishWithPlan()}>
+                <Text style={styles.secondaryButtonText}>Try Again</Text>
+              </Pressable>
+              {lastPlanRequestRef.current && getStarterPlan(lastPlanRequestRef.current) ? (
+                <Pressable style={styles.primaryButton} onPress={() => void handleUseStarterPlan()}>
+                  <Text style={styles.primaryButtonText}>Use Starter Plan</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {generatePlan.isPending ? (
+          <Text style={styles.generatingText}>{LOADING_MESSAGES[loadingMessageIndex]}</Text>
+        ) : null}
+
+        <RequestChangesModal
+          visible={showChangesModal}
+          onClose={() => setShowChangesModal(false)}
+          onSubmit={(change) => void handleSubmitChanges(change)}
+          isSubmitting={chat.isRequestingOutline}
+        />
+      </View>
+    );
   }
 
   return (
@@ -235,38 +317,21 @@ export function RoadmapCreationChatScreen() {
               onChange={(patch) =>
                 chat.setGoalCard((prev) => (prev ? { ...prev, ...patch } : prev))
               }
-              onConfirm={finishWithPlan}
-              isLoading={generatePlan.isPending}
+              onConfirm={() => void chat.requestLessonPlan()}
+              isLoading={chat.isLoading}
             />
           ) : null}
 
           {chat.isLoading ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color={onboardingColors.primary} />
-              <Text style={styles.loadingText}>Thinking…</Text>
+              <Text style={styles.loadingText}>
+                {chat.isRequestingOutline ? 'Building your outline…' : 'Thinking…'}
+              </Text>
             </View>
           ) : null}
-
-          {duplicateError ? <InlineError message={duplicateError} /> : null}
 
           {chat.error ? <InlineError message={chat.error} /> : null}
-
-          {generationFailed ? (
-            <View style={styles.failureCard}>
-              <InlineError message={GENERATION_ERROR_MESSAGE} />
-              <View style={styles.failureActions}>
-                <Pressable style={styles.secondaryButton} onPress={finishWithPlan}>
-                  <Text style={styles.secondaryButtonText}>Try Again</Text>
-                </Pressable>
-                {lastPlanRequestRef.current &&
-                getStarterPlan(lastPlanRequestRef.current) ? (
-                  <Pressable style={styles.primaryButton} onPress={handleUseStarterPlan}>
-                    <Text style={styles.primaryButtonText}>Use Starter Plan</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
         </ScrollView>
 
         <ChatInputBar
@@ -276,10 +341,6 @@ export function RoadmapCreationChatScreen() {
           placeholder={inputPlaceholder}
           disabled={chat.isLoading || generatePlan.isPending}
         />
-
-        {generatePlan.isPending ? (
-          <Text style={styles.generatingText}>{LOADING_MESSAGES[loadingMessageIndex]}</Text>
-        ) : null}
       </View>
     </KeyboardAvoidingView>
   );
@@ -314,6 +375,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  outlineLoading: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: 'center',
   },
   loadingText: {
     color: onboardingColors.textMuted,
