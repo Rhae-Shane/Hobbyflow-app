@@ -13,6 +13,11 @@ export type MaterializeRoadmapRequest = {
     suggestedGoal: string;
     suggestedBackground: string;
     suggestedLevel: 'beginner' | 'intermediate' | 'advanced';
+    suggestedTags?: Array<{
+      hobbyId: number | null;
+      name: string;
+      source: 'catalog' | 'custom';
+    }>;
   };
   lessonPlan: {
     courseTitle: string;

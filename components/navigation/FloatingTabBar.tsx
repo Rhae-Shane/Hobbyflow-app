@@ -1,24 +1,55 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { AskAnythingSheet } from '@/components/ask/AskAnythingSheet';
+import {
+  CoursesTabIcon,
+  FeedTabIcon,
+  GenerateTabIcon,
+  HomeTabIcon,
+  ProfileTabIcon,
+  SparkleIcon,
+} from '@/components/icons/AppIcons';
 import { onboardingColors } from '@/constants/onboardingTokens';
 
 const ACTIVE_BG = '#EDE8DF';
 const INACTIVE = '#6B5E52';
 const ACTIVE = '#2C2416';
 
-const TAB_GLYPHS: Record<string, { active: string; inactive: string }> = {
-  index: { active: '⌂', inactive: '⌂' },
-  generate: { active: '✦', inactive: '✧' },
-  courses: { active: '▤', inactive: '▥' },
-  profile: { active: '☺', inactive: '○' },
+const TAB_ICONS: Record<
+  string,
+  (props: { color: string; focused: boolean }) => ReactElement
+> = {
+  index: ({ color }) => <HomeTabIcon size={22} color={color} />,
+  feed: ({ color, focused }) => <FeedTabIcon size={22} color={color} filled={focused} />,
+  generate: ({ color }) => <GenerateTabIcon size={22} color={color} />,
+  courses: ({ color }) => <CoursesTabIcon size={22} color={color} />,
+  profile: ({ color }) => <ProfileTabIcon size={22} color={color} />,
 };
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [askOpen, setAskOpen] = useState(false);
-  // Root SafeAreaView already clears the home indicator; keep a small gap above it.
+  const pulse = useRef(new Animated.Value(1)).current;
   const bottomPad = 10;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.06,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   return (
     <>
@@ -26,52 +57,55 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         <View style={styles.row}>
           <View style={styles.pill}>
             {state.routes
-              .filter((route) => route.name in TAB_GLYPHS)
+              .filter((route) => route.name in TAB_ICONS)
               .map((route) => {
-              const index = state.routes.findIndex((r) => r.key === route.key);
-              const focused = state.index === index;
-              const { options } = descriptors[route.key];
-              const glyphs = TAB_GLYPHS[route.name] ?? { active: '•', inactive: '·' };
-              const label =
-                typeof options.tabBarLabel === 'string'
-                  ? options.tabBarLabel
-                  : options.title ?? route.name;
+                const index = state.routes.findIndex((r) => r.key === route.key);
+                const focused = state.index === index;
+                const { options } = descriptors[route.key];
+                const Icon = TAB_ICONS[route.name];
+                const label =
+                  typeof options.tabBarLabel === 'string'
+                    ? options.tabBarLabel
+                    : options.title ?? route.name;
 
-              return (
-                <Pressable
-                  key={route.key}
-                  accessibilityRole="button"
-                  accessibilityState={focused ? { selected: true } : {}}
-                  accessibilityLabel={label}
-                  onPress={() => {
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-                    if (!focused && !event.defaultPrevented) {
-                      navigation.navigate(route.name, route.params);
-                    }
-                  }}
-                  style={[styles.tabBtn, focused && styles.tabBtnActive]}
-                  testID={`tab-${route.name}`}
-                >
-                  <Text style={[styles.glyph, focused ? styles.glyphActive : styles.glyphInactive]}>
-                    {focused ? glyphs.active : glyphs.inactive}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                return (
+                  <Pressable
+                    key={route.key}
+                    accessibilityRole="button"
+                    accessibilityState={focused ? { selected: true } : {}}
+                    accessibilityLabel={label}
+                    onPress={() => {
+                      const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                      });
+                      if (!focused && !event.defaultPrevented) {
+                        navigation.navigate(route.name, route.params);
+                      }
+                    }}
+                    style={[styles.tabBtn, focused && styles.tabBtnActive]}
+                    testID={`tab-${route.name}`}
+                  >
+                    {Icon ? (
+                      <Icon color={focused ? ACTIVE : INACTIVE} focused={focused} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
           </View>
 
-          <Pressable
-            accessibilityLabel="Ask me anything"
-            onPress={() => setAskOpen(true)}
-            style={styles.fab}
-            testID="tab-ask"
-          >
-            <Text style={styles.fabGlyph}>✦</Text>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: pulse }] }}>
+            <Pressable
+              accessibilityLabel="Ask me anything"
+              onPress={() => setAskOpen(true)}
+              style={styles.fab}
+              testID="tab-ask"
+            >
+              <View style={styles.fabGlow} />
+              <SparkleIcon size={22} color={ACTIVE} />
+            </Pressable>
+          </Animated.View>
         </View>
       </View>
 
@@ -80,7 +114,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   );
 }
 
-export const FLOATING_TAB_BAR_HEIGHT = 72;
+export { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 
 const styles = StyleSheet.create({
   wrap: {
@@ -126,16 +160,6 @@ const styles = StyleSheet.create({
   tabBtnActive: {
     backgroundColor: ACTIVE_BG,
   },
-  glyph: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  glyphActive: {
-    color: ACTIVE,
-  },
-  glyphInactive: {
-    color: INACTIVE,
-  },
   fab: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -145,15 +169,18 @@ const styles = StyleSheet.create({
     elevation: 6,
     height: 58,
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: '#2C2416',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 10,
     width: 58,
   },
-  fabGlyph: {
-    color: ACTIVE,
-    fontSize: 22,
-    fontWeight: '800',
+  fabGlow: {
+    backgroundColor: 'rgba(124, 203, 250, 0.22)',
+    borderRadius: 20,
+    height: 40,
+    position: 'absolute',
+    width: 40,
   },
 });

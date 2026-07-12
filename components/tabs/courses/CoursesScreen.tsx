@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';

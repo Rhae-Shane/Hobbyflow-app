@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import type { GoalCardState } from '@/types/roadmapCreation.types';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
@@ -61,6 +62,13 @@ export function GoalSuggestionCard({ goalCard, onChange, onConfirm, isLoading = 
           );
         })}
       </View>
+
+      {goalCard.suggestedTags.length > 0 ? (
+        <>
+          <Text style={styles.label}>Profile tags</Text>
+          <HobbyTagsRow tags={goalCard.suggestedTags} align="flex-start" />
+        </>
+      ) : null}
 
       <Pressable
         style={[styles.cta, isLoading && styles.ctaDisabled]}

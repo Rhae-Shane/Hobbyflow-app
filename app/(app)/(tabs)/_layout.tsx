@@ -15,6 +15,7 @@ export default function TabsLayout() {
   const cloudHydrationStatus = usePlanStore((s) => s.cloudHydrationStatus);
   const preferences = usePreferencesStore((s) => s.preferences);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const username = useUserStore((s) => s.username);
   const userHydrationStatus = useUserStore((s) => s.hydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
@@ -25,16 +26,16 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (!storeHydrated || waitingForCloud || waitingForUser) return;
-    if (hasCompletedOnboarding(completedOnboardingAt)) return;
 
     const route = getPostAuthRoute({
+      username,
       completedOnboardingAt,
       hasPreferences: hasCompletedPreferences(preferences),
       hasHobbies: hobbies.length > 0,
     });
 
     if (route !== '/(app)/(tabs)') {
-      router.replace(route);
+      router.replace(route as never);
     }
   }, [
     completedOnboardingAt,
@@ -42,6 +43,7 @@ export default function TabsLayout() {
     preferences,
     router,
     storeHydrated,
+    username,
     waitingForCloud,
     waitingForUser,
   ]);
@@ -70,6 +72,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Roadmap', tabBarLabel: 'Roadmap' }} />
+      <Tabs.Screen name="feed" options={{ title: 'Feed', tabBarLabel: 'Feed' }} />
       <Tabs.Screen name="generate" options={{ title: 'Generation', tabBarLabel: 'Generation' }} />
       <Tabs.Screen name="courses" options={{ title: 'Courses', tabBarLabel: 'Courses' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarLabel: 'Profile' }} />

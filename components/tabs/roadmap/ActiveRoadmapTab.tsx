@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { RoadmapHomeScreen } from '@/components/roadmap/RoadmapHomeScreen';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';

@@ -22,7 +22,7 @@ async function handleUnauthorized(path: string) {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: unknown;
   auth?: boolean;
   /** Override default 30s timeout (e.g. materialize LLM calls). */

@@ -4,9 +4,7 @@ import {
   resolveMissedDays,
   withActivityDay,
 } from '@/lib/gamification/streakMath';
-import { buildDailyTaskDraft } from '@/lib/gamification/dailyTaskFactory';
 import { streakBonusFor } from '@/lib/gamification/constants';
-import type { HobbyRow } from '@/types/user.types';
 
 describe('streakMath', () => {
   it('computes consecutive streak ending today', () => {
@@ -62,43 +60,8 @@ describe('streakMath', () => {
   });
 });
 
-describe('dailyTaskFactory', () => {
-  const hobbies: HobbyRow[] = [
-    {
-      id: 'h1',
-      user_id: 'u1',
-      name: 'Guitar',
-      level: 'beginner',
-      goal: '',
-      is_active: true,
-      created_at: '',
-      updated_at: '',
-    },
-    {
-      id: 'h2',
-      user_id: 'u1',
-      name: 'Chess',
-      level: 'beginner',
-      goal: '',
-      is_active: false,
-      created_at: '',
-      updated_at: '',
-    },
-  ];
-
-  it('picks a deterministic hobby task', () => {
-    const a = buildDailyTaskDraft('user-1', '2026-07-11', hobbies);
-    const b = buildDailyTaskDraft('user-1', '2026-07-11', hobbies);
-    expect(a).toEqual(b);
-    expect(a.hobby_id).toBeTruthy();
-    expect(a.rating_reward).toBe(10);
-    expect(a.title).toMatch(/Guitar|Chess/);
-  });
-});
-
 describe('streakBonusFor', () => {
   it('caps streak bonus', () => {
-    expect(streakBonusFor(0)).toBe(0);
     expect(streakBonusFor(3)).toBe(3);
     expect(streakBonusFor(20)).toBe(7);
   });

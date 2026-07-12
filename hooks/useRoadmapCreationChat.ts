@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking } from 'react-native';
+import {
+  EMAIL_HOBBY_CATALOG_CHIP,
+  hobbyCatalogFeedbackMailtoUrl,
+  NO_TAGS_MATCHING_CHIP,
+} from '@/constants/hobbyCatalogFeedback';
 import { buildPreferencesAiContext } from '@/constants/preferences';
 import { formatClarificationAnswer } from '@/lib/roadmap-creation/formatClarificationAnswer';
 import { sendRoadmapCreationMessage } from '@/services/roadmapCreationChat';
@@ -22,13 +28,21 @@ function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function goalCardFromResponse(response: GoalSuggestionResponse): GoalCardState {
+function goalCardFromResponse(
+  response: GoalSuggestionResponse,
+  previous?: GoalCardState | null,
+): GoalCardState {
+  const incomingTags = response.suggestedTags ?? [];
+  const suggestedTags =
+    incomingTags.length > 0 ? incomingTags : (previous?.suggestedTags ?? []);
+
   return {
     suggestedHobby: response.suggestedHobby,
     suggestedName: response.suggestedName,
     suggestedGoal: response.suggestedGoal,
     suggestedBackground: response.suggestedBackground,
     suggestedLevel: response.suggestedLevel ?? 'beginner',
+    suggestedTags,
   };
 }
 
@@ -137,6 +151,7 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
                   suggestedGoal: response.suggestedGoal,
                   suggestedBackground: response.suggestedBackground,
                   suggestedLevel: response.suggestedLevel,
+                  suggestedTags: response.suggestedTags ?? [],
                 }
               : {
                   courseTitle: response.courseTitle,
@@ -156,7 +171,7 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
       let nextPlan = lessonPlanRef.current;
 
       if (response.type === 'goal_suggestion') {
-        nextGoal = goalCardFromResponse(response);
+        nextGoal = goalCardFromResponse(response, goalCardRef.current);
         nextPlan = null;
         setGoalCard(nextGoal);
         setLessonPlan(null);
@@ -221,6 +236,7 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
           roadmapName: goalCard?.suggestedName,
           roadmapGoal: goalCard?.suggestedGoal,
           roadmapBackground: goalCard?.suggestedBackground,
+          suggestedTags: goalCard?.suggestedTags,
         });
 
         await applyAssistantResponse(response, nextMessages);
@@ -273,11 +289,22 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
 
   const handleChipSelect = useCallback(
     (text: string) => {
+      if (text === EMAIL_HOBBY_CATALOG_CHIP) {
+        void Linking.openURL(hobbyCatalogFeedbackMailtoUrl());
+        return;
+      }
+
       const multiSelect = activeClarification?.metadata?.multiSelect ?? false;
       if (multiSelect) {
-        setSelectedChips((prev) =>
-          prev.includes(text) ? prev.filter((t) => t !== text) : [...prev, text],
-        );
+        setSelectedChips((prev) => {
+          if (text === NO_TAGS_MATCHING_CHIP) {
+            return prev.includes(text) ? [] : [NO_TAGS_MATCHING_CHIP];
+          }
+          const withoutNoMatch = prev.filter((chip) => chip !== NO_TAGS_MATCHING_CHIP);
+          return withoutNoMatch.includes(text)
+            ? withoutNoMatch.filter((chip) => chip !== text)
+            : [...withoutNoMatch, text];
+        });
         return;
       }
       void sendMessage(text);
@@ -288,7 +315,8 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
   const handleMcqSend = useCallback(() => {
     const multiSelect = activeClarification?.metadata?.multiSelect ?? false;
     if (multiSelect) {
-      const formatted = formatClarificationAnswer(selectedChips, mcqFreeText);
+      const chipsForAnswer = selectedChips.filter((chip) => chip !== EMAIL_HOBBY_CATALOG_CHIP);
+      const formatted = formatClarificationAnswer(chipsForAnswer, mcqFreeText);
       if (!formatted.trim()) return;
       void sendMessage(formatted);
       return;
@@ -323,7 +351,10 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
         const contextGoal = row.context?.goalCard as GoalCardState | null | undefined;
         const lastGoal = [...restored].reverse().find((m) => m.type === 'goal_suggestion');
         if (contextGoal?.suggestedName) {
-          setGoalCard(contextGoal);
+          setGoalCard({
+            ...contextGoal,
+            suggestedTags: contextGoal.suggestedTags ?? [],
+          });
         } else if (lastGoal?.metadata) {
           setGoalCard({
             suggestedHobby: lastGoal.metadata.suggestedHobby ?? '',
@@ -331,6 +362,7 @@ export function useRoadmapCreationChat({ userId, preferences, isFirstRoadmap }: 
             suggestedGoal: lastGoal.metadata.suggestedGoal ?? '',
             suggestedBackground: lastGoal.metadata.suggestedBackground ?? '',
             suggestedLevel: lastGoal.metadata.suggestedLevel ?? 'beginner',
+            suggestedTags: lastGoal.metadata.suggestedTags ?? [],
           });
         }
 

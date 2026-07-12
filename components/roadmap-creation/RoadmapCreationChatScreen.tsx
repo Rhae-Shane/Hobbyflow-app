@@ -20,7 +20,7 @@ import {
   RequestChangesModal,
 } from '@/components/roadmap-creation/LessonPlanOutlineCard';
 import { McqClarificationBlock } from '@/components/roadmap-creation/McqClarificationBlock';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { buildPreferencesAiContext } from '@/constants/preferences';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { spacing } from '@/constants/tokens';

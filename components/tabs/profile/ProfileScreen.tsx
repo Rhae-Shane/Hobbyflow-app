@@ -1,6 +1,10 @@
 import { ClaimUsernameSheet } from '@/components/profile/ClaimUsernameSheet';
+import { EditBioLinksSheet } from '@/components/profile/EditBioLinksSheet';
+import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
+import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
+import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { InlineError } from '@/components/ui/InlineError';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
@@ -8,20 +12,26 @@ import { useAuth } from '@/hooks/useAuth';
 import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { signOut } from '@/lib/auth';
 import { toAuthError } from '@/lib/errors';
-import { setProfilePublic } from '@/services/profileSearch';
+import { listFeed } from '@/services/posts';
+import { fetchOwnHobbyTags } from '@/services/profileSearch';
+import { fetchSocialLinks } from '@/services/socialLinks';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { usePactStore } from '@/store/usePactStore';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useUserStore } from '@/store/useUserStore';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import type { FeedPost, SocialLink } from '@/types/post.types';
+import type { PublicProfile } from '@/types/gamification.types';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 const PROGRESS_LINKS = [
   { id: 'streak', label: 'My Streak', icon: '🔥', href: '/(app)/streak' },
+  { id: 'daily-tasks', label: 'Daily Tasks', icon: '✅', href: '/(app)/daily-tasks' },
   { id: 'pact', label: 'The Pact', icon: '🤝', href: '/(app)/pact' },
   { id: 'search', label: 'Find learners', icon: '🔍', href: '/(app)/search' },
+  { id: 'feed', label: 'Community Feed', icon: '◎', href: '/(app)/(tabs)/feed' },
   { id: 'weekly', label: 'Weekly Report', icon: '📅', href: '/(app)/(tabs)/courses' },
   { id: 'stats', label: 'Learning Stats', icon: '📊', href: '/(app)/(tabs)/courses' },
   { id: 'courses', label: 'Roadmap Stats', icon: '📖', href: '/(app)/(tabs)/courses' },
@@ -35,8 +45,7 @@ export function ProfileScreen() {
   const clearPreferencesSession = usePreferencesStore((s) => s.clearSession);
   const clearUserSession = useUserStore((s) => s.clearSession);
   const username = useUserStore((s) => s.username);
-  const isProfilePublic = useUserStore((s) => s.isProfilePublic);
-  const setIsProfilePublic = useUserStore((s) => s.setIsProfilePublic);
+  const bio = useUserStore((s) => s.bio);
   const clearGamification = useGamificationStore((s) => s.clearSession);
   const clearPact = usePactStore((s) => s.clearSession);
   const currentStreak = useGamificationStore((s) => s.currentStreak);
@@ -47,12 +56,40 @@ export function ProfileScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [links, setLinks] = useState<SocialLink[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [hobbyTags, setHobbyTags] = useState<PublicProfile['hobbyTags']>([]);
 
   const displayName = username
     ? `@${username}`
     : user?.email?.split('@')[0] || profile?.hobby || 'Learner';
   const initial = (username || displayName).replace('@', '').charAt(0).toUpperCase();
   const league = findLeague(leagueId, leagues);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      let cancelled = false;
+      void Promise.all([
+        fetchSocialLinks(user.id),
+        listFeed({ limit: 30, authorId: user.id }),
+        fetchOwnHobbyTags(user.id),
+      ])
+        .then(([nextLinks, nextPosts, nextTags]) => {
+          if (cancelled) return;
+          setLinks(nextLinks);
+          setPosts(nextPosts);
+          setHobbyTags(nextTags);
+        })
+        .catch(() => {
+          /* ignore soft failures on profile */
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.id]),
+  );
 
   const handleSignOut = async () => {
     setSignOutError(null);
@@ -77,21 +114,25 @@ export function ProfileScreen() {
       setClaimOpen(true);
       return;
     }
-    if (!isProfilePublic) return;
     await Share.share({
       message: profileShareMessage(username, league.name, rating),
     });
   };
 
-  const togglePublic = async () => {
-    if (!user?.id) return;
-    const next = !isProfilePublic;
-    setIsProfilePublic(next);
-    try {
-      await setProfilePublic(user.id, next);
-    } catch {
-      setIsProfilePublic(!next);
+  const onEditProfile = () => {
+    if (!username) {
+      setClaimOpen(true);
+      return;
     }
+    setEditOpen(true);
+  };
+
+  const onNewPost = () => {
+    if (!username) {
+      setClaimOpen(true);
+      return;
+    }
+    router.push('/(app)/post/compose' as never);
   };
 
   return (
@@ -128,7 +169,7 @@ export function ProfileScreen() {
       {!username ? (
         <Pressable style={styles.claimBanner} onPress={() => setClaimOpen(true)}>
           <Text style={styles.claimTitle}>Claim your username</Text>
-          <Text style={styles.claimSub}>Needed to appear in search and share your profile.</Text>
+          <Text style={styles.claimSub}>Needed to post, appear in search, and share your profile.</Text>
         </Pressable>
       ) : null}
 
@@ -138,6 +179,9 @@ export function ProfileScreen() {
         </View>
         <Text style={styles.name}>{displayName}</Text>
         <LeagueBadge leagueId={leagueId} leagues={leagues} />
+        {bio ? <Text style={styles.bio}>{bio}</Text> : null}
+        <HobbyTagsRow tags={hobbyTags} />
+        <SocialLinksRow links={links} />
         <Pressable
           style={styles.statRow}
           onPress={() => router.push('/(app)/streak' as never)}
@@ -150,14 +194,20 @@ export function ProfileScreen() {
           <Text style={styles.statItem}>🤝 {pactsFulfilled} kept</Text>
         </Pressable>
         <View style={styles.actionRow}>
+          <Pressable style={styles.editBtn} onPress={onEditProfile}>
+            <Text style={styles.editText}>EDIT</Text>
+          </Pressable>
           <Pressable style={styles.editBtn} onPress={() => void onShare()}>
             <Text style={styles.editText}>SHARE</Text>
           </Pressable>
-          <Pressable style={styles.editBtn} onPress={() => void togglePublic()}>
-            <Text style={styles.editText}>{isProfilePublic ? 'PUBLIC' : 'PRIVATE'}</Text>
+          <Pressable style={styles.editBtn} onPress={onNewPost}>
+            <Text style={styles.editText}>NEW POST</Text>
           </Pressable>
         </View>
       </View>
+
+      <Text style={styles.sectionTitle}>Posts</Text>
+      <ProfilePostsGrid posts={posts} emptyHint="Share your first hobby post." />
 
       <Text style={styles.sectionTitle}>My Progress</Text>
       <View style={styles.listCard}>
@@ -174,24 +224,26 @@ export function ProfileScreen() {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Learning</Text>
-      <View style={styles.listCard}>
-        <View style={styles.learningPlaceholder} />
-        <Text style={styles.learningHint}>Saved notes and highlights will appear here.</Text>
-      </View>
-
       {signOutError ? <InlineError message={signOutError} /> : null}
       <Pressable style={styles.signOut} onPress={handleSignOut} disabled={isSigningOut}>
         <Text style={styles.signOutText}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
       </Pressable>
 
       {user?.id ? (
-        <ClaimUsernameSheet
-          visible={claimOpen}
-          userId={user.id}
-          onClose={() => setClaimOpen(false)}
-          onClaimed={() => setClaimOpen(false)}
-        />
+        <>
+          <ClaimUsernameSheet
+            visible={claimOpen}
+            userId={user.id}
+            onClose={() => setClaimOpen(false)}
+            onClaimed={() => setClaimOpen(false)}
+          />
+          <EditBioLinksSheet
+            visible={editOpen}
+            userId={user.id}
+            onClose={() => setEditOpen(false)}
+            onSaved={setLinks}
+          />
+        </>
       ) : null}
     </ScrollView>
   );
@@ -273,6 +325,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
   },
+  bio: {
+    color: onboardingColors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   statRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -292,7 +350,9 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
+    justifyContent: 'center',
     marginTop: spacing.xs,
   },
   editBtn: {
@@ -344,18 +404,6 @@ const styles = StyleSheet.create({
   chevron: {
     color: onboardingColors.textMuted,
     fontSize: 22,
-  },
-  learningPlaceholder: {
-    backgroundColor: '#EFEAE0',
-    borderRadius: 12,
-    height: 72,
-    margin: spacing.md,
-  },
-  learningHint: {
-    color: onboardingColors.textMuted,
-    fontSize: 13,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.md,
   },
   signOut: {
     alignItems: 'center',

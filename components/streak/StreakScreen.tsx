@@ -12,12 +12,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { daysRemaining } from '@/lib/pact/pactMath';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { usePactStore } from '@/store/usePactStore';
-import { usePlanStore } from '@/store/usePlanStore';
 
 export function StreakScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const hobbies = usePlanStore((s) => s.hobbies);
   const hydrate = useGamificationStore((s) => s.hydrate);
   const refreshLeaderboard = useGamificationStore((s) => s.refreshLeaderboard);
   const completeDailyTask = useGamificationStore((s) => s.completeDailyTask);
@@ -48,10 +46,10 @@ export function StreakScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!user?.id) return;
-      void hydrate(user.id, hobbies);
+      void hydrate(user.id);
       void hydratePact(user.id);
       void refreshLeaderboard();
-    }, [hobbies, hydrate, hydratePact, refreshLeaderboard, user?.id]),
+    }, [hydrate, hydratePact, refreshLeaderboard, user?.id]),
   );
 
   return (
@@ -130,13 +128,15 @@ export function StreakScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Daily Task</Text>
-        <Text style={styles.sectionSub}>From any of your hobbies · finish to raise your rating</Text>
+        <Text style={styles.sectionSub}>Generate when ready · finish to raise your rating</Text>
         <DailyTaskCard
           task={todayTask}
           isCompleting={isCompletingTask}
           onComplete={() => {
             void completeDailyTask();
           }}
+          onSeeToday={() => router.push('/(app)/daily-tasks' as never)}
+          onOpenDailyTasks={() => router.push('/(app)/daily-tasks' as never)}
         />
 
         <Text style={styles.sectionTitle}>Ranking</Text>

@@ -1,6 +1,7 @@
 export type RoadmapCreationFlowState =
   | 'collecting-input'
   | 'clarifying'
+  | 'selecting-tags'
   | 'confirming-goal'
   | 'reviewing-outline';
 
@@ -11,12 +12,18 @@ export type ChatTurnMessage = {
 
 export type QuickReply = { text: string };
 
+export type HobbyTag = {
+  hobbyId: number | null;
+  name: string;
+  source: 'catalog' | 'custom';
+};
+
 export type ClarificationResponse = {
   type: 'clarification';
   message: string;
   quickReplies: QuickReply[];
   multiSelect: boolean;
-  flowState: 'collecting-input' | 'clarifying';
+  flowState: 'collecting-input' | 'clarifying' | 'selecting-tags';
 };
 
 export type GoalSuggestionResponse = {
@@ -27,6 +34,7 @@ export type GoalSuggestionResponse = {
   suggestedGoal: string;
   suggestedBackground: string;
   suggestedLevel?: 'beginner' | 'intermediate' | 'advanced';
+  suggestedTags?: HobbyTag[];
   flowState: 'confirming-goal';
 };
 
@@ -69,6 +77,7 @@ export type RoadmapCreationChatRequest = {
   roadmapName?: string;
   roadmapGoal?: string;
   roadmapBackground?: string;
+  suggestedTags?: HobbyTag[];
   conversationId?: string;
 };
 
@@ -85,6 +94,7 @@ export type DisplayMessage = {
     suggestedGoal?: string;
     suggestedBackground?: string;
     suggestedLevel?: 'beginner' | 'intermediate' | 'advanced';
+    suggestedTags?: HobbyTag[];
     courseTitle?: string;
     sections?: LessonPlanSection[];
     stage?: 'outline';
@@ -98,6 +108,7 @@ export type GoalCardState = {
   suggestedGoal: string;
   suggestedBackground: string;
   suggestedLevel: 'beginner' | 'intermediate' | 'advanced';
+  suggestedTags: HobbyTag[];
 };
 
 export type LessonPlanState = {

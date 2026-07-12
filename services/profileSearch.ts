@@ -5,9 +5,32 @@ import {
   normalizeUsername,
   validateUsernameFormat,
 } from '@/lib/gamification/constants';
-import type { ProfileSearchHit, PublicProfile } from '@/types/gamification.types';
+import type { HobbyTagSearchHit, ProfileSearchHit, PublicProfile } from '@/types/gamification.types';
 
 const log = createLogger('profile-search');
+
+type HobbyTag = PublicProfile['hobbyTags'][number];
+
+function parseHobbyTags(raw: unknown): HobbyTag[] {
+  if (!Array.isArray(raw)) return [];
+  const out: HobbyTag[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const name = typeof row.name === 'string' ? row.name.trim() : '';
+    if (!name) continue;
+    const source: HobbyTag['source'] =
+      row.source === 'catalog' || row.source === 'custom' ? row.source : 'custom';
+    const hobbyId =
+      typeof row.hobbyId === 'number' && Number.isInteger(row.hobbyId) ? row.hobbyId : null;
+    out.push({
+      hobbyId: source === 'custom' ? null : hobbyId,
+      name,
+      source,
+    });
+  }
+  return out;
+}
 
 export async function checkUsernameAvailable(raw: string): Promise<{
   available: boolean;
@@ -87,21 +110,8 @@ export async function claimUsername(userId: string, raw: string): Promise<string
   return username;
 }
 
-export async function setProfilePublic(userId: string, isPublic: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('users')
-    .update({ is_profile_public: isPublic, updated_at: new Date().toISOString() })
-    .eq('id', userId);
-
-  if (error) {
-    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
-      cause: error,
-    });
-  }
-}
-
 export async function searchProfiles(query: string): Promise<ProfileSearchHit[]> {
-  const q = normalizeUsername(query);
+  const q = query.trim().toLowerCase().replace(/^@/, '');
   if (q.length < 2) return [];
 
   const { data, error } = await supabase.rpc('search_profiles', { q, lim: 20 });
@@ -120,8 +130,37 @@ export async function searchProfiles(query: string): Promise<ProfileSearchHit[]>
     rating: row.rating as number,
     leagueId: (row.league_id as string | null) ?? null,
     currentStreak: row.current_streak as number,
+    hobbyTags: parseHobbyTags(row.hobby_tags),
   }));
 }
+
+export async function searchHobbyTags(query: string): Promise<HobbyTagSearchHit[]> {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+
+  const { data, error } = await supabase.rpc('search_hobby_tags', { q, lim: 20 });
+
+  if (error) {
+    log.error('Hobby tag search failed', { error: error.message });
+    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
+      cause: error,
+    });
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const source: HobbyTagSearchHit['source'] =
+      row.source === 'catalog' || row.source === 'custom' ? row.source : 'custom';
+    const hobbyId =
+      typeof row.hobby_id === 'number' && Number.isInteger(row.hobby_id) ? row.hobby_id : null;
+    return {
+      hobbyId: source === 'custom' ? null : hobbyId,
+      name: (row.name as string) ?? '',
+      source,
+    };
+  }).filter((t: HobbyTagSearchHit) => t.name.length > 0);
+}
+
+export { parseHobbyTags };
 
 export async function fetchPublicProfile(usernameRaw: string): Promise<PublicProfile | null> {
   const username = normalizeUsername(usernameRaw);
@@ -144,10 +183,26 @@ export async function fetchPublicProfile(usernameRaw: string): Promise<PublicPro
     username: row.username as string,
     displayName: (row.display_name as string) || (row.username as string),
     bio: (row.bio as string) || '',
+    hobbyTags: parseHobbyTags(row.hobby_tags),
     rating: row.rating as number,
     peakRating: row.peak_rating as number,
     leagueId: (row.league_id as string | null) ?? null,
     currentStreak: row.current_streak as number,
     longestStreak: row.longest_streak as number,
   };
+}
+
+export async function fetchOwnHobbyTags(userId: string): Promise<HobbyTag[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('hobby_tags')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    log.warn('Failed to load own hobby tags', { userId, error: error.message });
+    return [];
+  }
+
+  return parseHobbyTags(data?.hobby_tags);
 }

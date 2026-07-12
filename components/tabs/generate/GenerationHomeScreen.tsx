@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/FloatingTabBar';
+import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import {
   GENERATION_SUGGESTIONS,
   type GenerationSuggestion,

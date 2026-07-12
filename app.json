@@ -24,7 +24,15 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow HobbyFlow to attach photos and videos to your posts.",
+          "cameraPermission": "Allow HobbyFlow to capture photos and videos for your posts."
+        }
+      ],
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true

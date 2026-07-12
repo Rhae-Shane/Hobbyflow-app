@@ -127,3 +127,57 @@ export async function archiveRoadmapCreationConversation(
     log.warn('Failed to archive conversation', { error: error.message });
   }
 }
+
+export async function listAskAnythingConversationsLocal(
+  userId: string,
+  limit = 50,
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    last_message_at: string | null;
+    messages: DisplayMessage[];
+  }>
+> {
+  const { data, error } = await supabase
+    .from('chat_conversations')
+    .select('id, title, last_message_at, messages')
+    .eq('user_id', userId)
+    .eq('context->>workflow', 'ask_anything')
+    .is('archived_at', null)
+    .order('last_message_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    log.warn('Failed to list ask conversations', { error: error.message });
+    return [];
+  }
+
+  return (
+    (data as Array<{
+      id: string;
+      title: string;
+      last_message_at: string | null;
+      messages: DisplayMessage[];
+    }>) ?? []
+  );
+}
+
+export async function archiveAskAnythingConversation(
+  userId: string,
+  conversationId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('chat_conversations')
+    .update({
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', conversationId)
+    .eq('user_id', userId)
+    .eq('context->>workflow', 'ask_anything');
+
+  if (error) {
+    log.warn('Failed to archive ask conversation', { error: error.message });
+  }
+}

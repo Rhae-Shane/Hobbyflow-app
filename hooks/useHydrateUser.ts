@@ -27,7 +27,6 @@ export function useHydrateUser(userId: string | undefined, isAuthenticated: bool
         setCompletedOnboardingAt(row?.completed_onboarding_at ?? null);
         setProfileFields({
           username: row?.username ?? null,
-          isProfilePublic: row?.is_profile_public ?? true,
           bio: row?.bio ?? '',
         });
         log.info('User row hydrated', {

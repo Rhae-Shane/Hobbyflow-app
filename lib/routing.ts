@@ -1,12 +1,24 @@
 import { hasCompletedPreferences } from '@/types/preferences.types';
 
-type PostAuthRoute = '/(app)/preferences' | '/(app)/roadmap-creation' | '/(app)/(tabs)';
+export type PostAuthRoute =
+  | '/(app)/claim-username'
+  | '/(app)/preferences'
+  | '/(app)/roadmap-creation'
+  | '/(app)/(tabs)';
 
+/**
+ * Post-auth navigation.
+ * Username is required immediately after signup, before preferences / hobbies / tabs.
+ */
 export function getPostAuthRoute(options: {
+  username: string | null;
   completedOnboardingAt: string | null;
   hasPreferences: boolean;
   hasHobbies: boolean;
 }): PostAuthRoute {
+  if (!options.username) {
+    return '/(app)/claim-username';
+  }
   if (options.completedOnboardingAt) {
     return '/(app)/(tabs)';
   }

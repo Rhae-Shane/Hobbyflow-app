@@ -17,6 +17,7 @@ export default function AuthLayout() {
   const preferences = usePreferencesStore((s) => s.preferences);
   const preferencesHydrationStatus = usePreferencesStore((s) => s.hydrationStatus);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const username = useUserStore((s) => s.username);
   const userHydrationStatus = useUserStore((s) => s.hydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
@@ -34,19 +35,22 @@ export default function AuthLayout() {
     }
     router.replace(
       getPostAuthRoute({
+        username,
         completedOnboardingAt,
         hasPreferences: hasCompletedPreferences(preferences),
         hasHobbies: hobbies.length > 0,
-      }),
+      }) as never,
     );
   }, [
     completedOnboardingAt,
+    hobbies.length,
     plan,
     preferences,
     preferencesHydrationStatus,
     router,
     storeHydrated,
     user,
+    username,
     waitingForCloudPlan,
     waitingForPreferences,
     waitingForUser,

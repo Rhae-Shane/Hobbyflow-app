@@ -10,12 +10,17 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
  * - preferences, roadmap-creation, onboarding → first-run only
  * - roadmap-preview/[id] → after CREATE ROADMAP
  * - roadmap/[id] → redirects into Roadmap tab
- * - (tabs) → Roadmap | Generation | Courses | Profile
+ * - (tabs) → Roadmap | Feed | Generation | Courses | Profile
  * - technique/[techniqueId] → detail
  */
 function isFirstRunOnlySegment(segments: string[]): boolean {
-  const leaf = segments[segments.length - 1];
-  return leaf === 'preferences' || leaf === 'roadmap-creation' || leaf === 'onboarding';
+  const leaf = String(segments[segments.length - 1] ?? '');
+  return (
+    leaf === 'preferences' ||
+    leaf === 'roadmap-creation' ||
+    leaf === 'onboarding' ||
+    leaf === 'claim-username'
+  );
 }
 
 export default function AppLayout() {
@@ -24,6 +29,7 @@ export default function AppLayout() {
   const { user, isLoading } = useAuth();
   const isUserHydrated = useIsUserHydrated();
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const username = useUserStore((s) => s.username);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -34,10 +40,23 @@ export default function AppLayout() {
   useEffect(() => {
     if (!user || !isUserHydrated) return;
 
-    if (hasCompletedOnboarding(completedOnboardingAt) && isFirstRunOnlySegment(segments)) {
-      router.replace('/(app)/(tabs)');
+    const leaf = String(segments[segments.length - 1] ?? '');
+    const onClaimUsername = leaf === 'claim-username';
+
+    if (!username && !onClaimUsername) {
+      router.replace('/(app)/claim-username' as never);
+      return;
     }
-  }, [completedOnboardingAt, isUserHydrated, router, segments, user]);
+
+    if (
+      username &&
+      hasCompletedOnboarding(completedOnboardingAt) &&
+      isFirstRunOnlySegment(segments) &&
+      !onClaimUsername
+    ) {
+      router.replace('/(app)/(tabs)' as never);
+    }
+  }, [completedOnboardingAt, isUserHydrated, router, segments, user, username]);
 
   if (isLoading || !user) {
     return <BootSpinner />;
@@ -46,6 +65,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="claim-username" />
       <Stack.Screen name="preferences" />
       <Stack.Screen name="roadmap-creation" />
       <Stack.Screen name="onboarding" />
@@ -53,9 +73,11 @@ export default function AppLayout() {
       <Stack.Screen name="roadmap/[id]" />
       <Stack.Screen name="technique/[techniqueId]" />
       <Stack.Screen name="streak" />
+      <Stack.Screen name="daily-tasks" />
       <Stack.Screen name="pact" />
       <Stack.Screen name="search" />
       <Stack.Screen name="u/[username]" />
+      <Stack.Screen name="post/compose" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

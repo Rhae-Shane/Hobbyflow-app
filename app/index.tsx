@@ -15,6 +15,7 @@ export default function Index() {
   const preferences = usePreferencesStore((s) => s.preferences);
   const preferencesHydrationStatus = usePreferencesStore((s) => s.hydrationStatus);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const username = useUserStore((s) => s.username);
   const userHydrationStatus = useUserStore((s) => s.hydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
@@ -42,11 +43,14 @@ export default function Index() {
 
   return (
     <Redirect
-      href={getPostAuthRoute({
-        completedOnboardingAt,
-        hasPreferences: hasCompletedPreferences(preferences),
-        hasHobbies: hobbies.length > 0,
-      })}
+      href={
+        getPostAuthRoute({
+          username,
+          completedOnboardingAt,
+          hasPreferences: hasCompletedPreferences(preferences),
+          hasHobbies: hobbies.length > 0,
+        }) as never
+      }
     />
   );
 }

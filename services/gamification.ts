@@ -2,7 +2,6 @@ import { createLogger } from '@/lib/logger';
 import { AppError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import { LEADERBOARD_LIMIT, STARTING_RATING } from '@/lib/gamification/constants';
-import { buildDailyTaskDraft } from '@/lib/gamification/dailyTaskFactory';
 import { FALLBACK_LEAGUES, ratingFieldsFromRating } from '@/lib/gamification/leagues';
 import { toDateKey } from '@/lib/gamification/streakMath';
 import type {
@@ -11,7 +10,6 @@ import type {
   LeagueRow,
   UserGamificationRow,
 } from '@/types/gamification.types';
-import type { HobbyRow } from '@/types/user.types';
 
 const log = createLogger('gamification');
 
@@ -19,7 +17,7 @@ const GAMIFICATION_SELECT =
   'user_id, current_streak, longest_streak, streak_savers, activity_dates, saver_used_dates, last_activity_date, rating, peak_rating, league_id, pacts_fulfilled, created_at, updated_at';
 
 const DAILY_TASK_SELECT =
-  'id, user_id, hobby_id, task_date, task_type, title, rating_reward, status, completed_at, created_at, updated_at';
+  'id, user_id, hobby_id, task_date, task_type, title, rating_reward, status, completed_at, counts_for_rating, regenerates_used, structured, rating_awarded, generated_by, created_at, updated_at';
 
 function normalizeGamification(row: UserGamificationRow): UserGamificationRow {
   return {
@@ -141,6 +139,7 @@ export async function updateUserGamification(
   return normalizeGamification(data as UserGamificationRow);
 }
 
+/** Prefer open primary, else completed primary for the local day (no auto-create). */
 export async function fetchTodayDailyTask(
   userId: string,
   taskDate = toDateKey(),
@@ -150,7 +149,10 @@ export async function fetchTodayDailyTask(
     .select(DAILY_TASK_SELECT)
     .eq('user_id', userId)
     .eq('task_date', taskDate)
-    .maybeSingle();
+    .eq('counts_for_rating', true)
+    .in('status', ['open', 'completed'])
+    .order('created_at', { ascending: false })
+    .limit(1);
 
   if (error) {
     log.error('Failed to fetch daily task', { userId, taskDate, error: error.message });
@@ -159,72 +161,7 @@ export async function fetchTodayDailyTask(
     });
   }
 
-  return (data as DailyTaskRow | null) ?? null;
-}
-
-export async function ensureTodayDailyTask(
-  userId: string,
-  hobbies: HobbyRow[],
-  taskDate = toDateKey(),
-): Promise<DailyTaskRow> {
-  const existing = await fetchTodayDailyTask(userId, taskDate);
-  if (existing) return existing;
-
-  const draft = buildDailyTaskDraft(userId, taskDate, hobbies);
-  const { data, error } = await supabase
-    .from('daily_tasks')
-    .insert({
-      user_id: userId,
-      hobby_id: draft.hobby_id,
-      task_date: draft.task_date,
-      task_type: draft.task_type,
-      title: draft.title,
-      rating_reward: draft.rating_reward,
-      status: 'open',
-    })
-    .select(DAILY_TASK_SELECT)
-    .single();
-
-  if (error || !data) {
-    const again = await fetchTodayDailyTask(userId, taskDate);
-    if (again) return again;
-    log.error('Failed to create daily task', { userId, error: error?.message });
-    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
-      cause: error,
-    });
-  }
-
-  return data as DailyTaskRow;
-}
-
-export async function markDailyTaskCompleted(taskId: string, userId: string): Promise<DailyTaskRow> {
-  const { data, error } = await supabase
-    .from('daily_tasks')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', taskId)
-    .eq('user_id', userId)
-    .eq('status', 'open')
-    .select(DAILY_TASK_SELECT)
-    .maybeSingle();
-
-  if (error) {
-    log.error('Failed to complete daily task', { taskId, userId, error: error.message });
-    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
-      cause: error,
-    });
-  }
-
-  if (!data) {
-    const current = await fetchTodayDailyTask(userId);
-    if (current) return current;
-    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED));
-  }
-
-  return data as DailyTaskRow;
+  return (data?.[0] as DailyTaskRow | undefined) ?? null;
 }
 
 export async function fetchLeaderboard(userId: string): Promise<{

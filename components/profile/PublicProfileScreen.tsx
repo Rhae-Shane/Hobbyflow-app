@@ -1,19 +1,27 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
+import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
+import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
+import { listFeed } from '@/services/posts';
 import { fetchPublicProfile } from '@/services/profileSearch';
+import { fetchSocialLinks } from '@/services/socialLinks';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import type { PublicProfile } from '@/types/gamification.types';
+import type { FeedPost, SocialLink } from '@/types/post.types';
 
 export function PublicProfileScreen() {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
   const leagues = useGamificationStore((s) => s.leagues);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [links, setLinks] = useState<SocialLink[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +32,20 @@ export function PublicProfileScreen() {
       setLoading(true);
       setError(null);
       void fetchPublicProfile(String(username))
-        .then((row) => {
+        .then(async (row) => {
           if (cancelled) return;
           setProfile(row);
-          if (!row) setError('Profile not found or private.');
+          if (!row) {
+            setError('Profile not found.');
+            return;
+          }
+          const [nextLinks, nextPosts] = await Promise.all([
+            fetchSocialLinks(row.userId),
+            listFeed({ limit: 30, authorId: row.userId }),
+          ]);
+          if (cancelled) return;
+          setLinks(nextLinks);
+          setPosts(nextPosts);
         })
         .catch((err: unknown) => {
           if (cancelled) return;
@@ -89,6 +107,8 @@ export function PublicProfileScreen() {
             <Text style={styles.displayName}>{profile.displayName}</Text>
             <LeagueBadge leagueId={profile.leagueId} leagues={leagues} />
             {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+            <HobbyTagsRow tags={profile.hobbyTags} />
+            <SocialLinksRow links={links} />
           </View>
 
           <View style={styles.statsRow}>
@@ -112,6 +132,9 @@ export function PublicProfileScreen() {
             </View>
           </View>
           <Text style={styles.peak}>Starts at 699 · rises when you keep learning</Text>
+
+          <Text style={styles.sectionTitle}>Posts</Text>
+          <ProfilePostsGrid posts={posts} />
         </ScrollView>
       )}
     </View>
@@ -229,6 +252,11 @@ const styles = StyleSheet.create({
     color: onboardingColors.textMuted,
     fontSize: 13,
     textAlign: 'center',
+  },
+  sectionTitle: {
+    color: onboardingColors.text,
+    fontSize: 18,
+    fontWeight: '800',
   },
   error: {
     color: onboardingColors.textMuted,
