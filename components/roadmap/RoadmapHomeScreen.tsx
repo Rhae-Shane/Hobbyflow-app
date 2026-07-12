@@ -4,6 +4,7 @@ import {
   Alert,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -26,7 +27,10 @@ import { InlineError } from '@/components/ui/InlineError';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
-import type { LearningPathNode } from '@/lib/roadmap/learningPathBuilder';
+import {
+  buildLearningPath,
+  type LearningPathNode,
+} from '@/lib/roadmap/learningPathBuilder';
 import type { LaidOutNode } from '@/lib/roadmap/mindMapLayout';
 import { mindMapColors } from '@/lib/roadmap/mindMapLayout';
 import {
@@ -56,12 +60,15 @@ type RoadmapHomeScreenProps = {
   onRoadmapChange?: (roadmapId: string) => void;
   /** Extra bottom inset for the floating tab bar. */
   contentBottomInset?: number;
+  /** Hide brand + streak pills when a parent already shows chrome (detail stack). */
+  showBrandBar?: boolean;
 };
 
 export function RoadmapHomeScreen({
   roadmapId,
   onRoadmapChange,
   contentBottomInset = 0,
+  showBrandBar = true,
 }: RoadmapHomeScreenProps = {}) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -80,6 +87,7 @@ export function RoadmapHomeScreen({
   const [playerOpen, setPlayerOpen] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const generateAttempted = useRef(false);
+  const sessionsListRef = useRef<ScrollView>(null);
   const currentStreak = useGamificationStore((s) => s.currentStreak);
   const rating = useGamificationStore((s) => s.rating);
   const onLessonCompleted = useGamificationStore((s) => s.onLessonCompleted);
@@ -178,6 +186,20 @@ export function RoadmapHomeScreen({
     return items;
   }, [selectedConcept, lessonById, lessonStatusByNodeId]);
 
+  const pathProgress = useMemo(() => {
+    const detail = detailQuery.data;
+    if (!detail) return { completed: 0, total: 0 };
+    const pathItems = buildLearningPath({ nodes: detail.nodes, lessons: detail.lessons });
+    const headers = pathItems.filter(
+      (i): i is Extract<(typeof pathItems)[number], { kind: 'section_header' }> =>
+        i.kind === 'section_header',
+    );
+    return {
+      completed: headers.reduce((sum, h) => sum + h.completedLessons, 0),
+      total: headers.reduce((sum, h) => sum + h.totalLessons, 0),
+    };
+  }, [detailQuery.data]);
+
   if (detailQuery.isLoading) {
     return <BootSpinner />;
   }
@@ -265,28 +287,40 @@ export function RoadmapHomeScreen({
     router.replace(`/(app)/roadmap/${next.id}` as never);
   };
 
+  const scrollToSessions = () => {
+    setMode('map');
+    // Drop past the featured module card into the session list.
+    requestAnimationFrame(() => {
+      sessionsListRef.current?.scrollTo({ y: 360, animated: true });
+    });
+  };
+
+  const moduleSubtitle =
+    typeof roadmap.intro?.intro === 'string' && roadmap.intro.intro.trim().length > 0
+      ? roadmap.intro.intro.trim().slice(0, 48)
+      : 'Your learning path';
+
   return (
-    <View style={[styles.container, contentBottomInset > 0 && { paddingBottom: contentBottomInset }]}>
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>HobbyFlow</Text>
-        <View style={styles.stats}>
-          <View style={styles.statPill}>
-            <Text style={styles.statText}>🔥 {currentStreak}</Text>
-          </View>
-          <View style={styles.statPill}>
-            <Text style={styles.statText}>★ {rating}</Text>
+    <View
+      style={[
+        styles.container,
+        contentBottomInset > 0 && { paddingBottom: contentBottomInset },
+        !showBrandBar && { paddingTop: spacing.xs },
+      ]}
+    >
+      {showBrandBar ? (
+        <View style={styles.topBar}>
+          <Text style={styles.brand}>HobbyFlow</Text>
+          <View style={styles.stats}>
+            <View style={styles.statPill}>
+              <Text style={styles.statText}>🔥 {currentStreak}</Text>
+            </View>
+            <View style={styles.statPill}>
+              <Text style={styles.statText}>★ {rating}</Text>
+            </View>
           </View>
         </View>
-      </View>
-
-      <RoadmapPathCard
-        title={roadmap.title}
-        coverUri={null}
-        mode={mode}
-        onModeChange={setMode}
-        onOpenSwitcher={() => setSwitcherOpen(true)}
-        onOpenMenu={onOpenMenu}
-      />
+      ) : null}
 
       {mode === 'map' ? (
         <LearningPathScroll
@@ -294,15 +328,44 @@ export function RoadmapHomeScreen({
           lessons={lessons}
           onNodePress={onNodePress}
           onJournalPress={() => openConceptMap()}
+          listRef={sessionsListRef}
           bottomInset={contentBottomInset}
+          header={
+            <RoadmapPathCard
+              title={roadmap.title}
+              subtitle={moduleSubtitle}
+              completedLessons={pathProgress.completed}
+              totalLessons={pathProgress.total}
+              coverUri={null}
+              mode={mode}
+              onModeChange={setMode}
+              onOpenSwitcher={() => setSwitcherOpen(true)}
+              onOpenMenu={onOpenMenu}
+              onViewSessions={scrollToSessions}
+            />
+          }
         />
       ) : (
-        <View style={styles.exerciseEmpty} testID="exercise-empty">
-          <Text style={styles.exerciseTitle}>Exercises coming soon</Text>
-          <Text style={styles.exerciseBody}>
-            Practice sessions will appear here after lesson content is ready. No practices are
-            created yet.
-          </Text>
+        <View style={styles.exercisePane}>
+          <RoadmapPathCard
+            title={roadmap.title}
+            subtitle={moduleSubtitle}
+            completedLessons={pathProgress.completed}
+            totalLessons={pathProgress.total}
+            coverUri={null}
+            mode={mode}
+            onModeChange={setMode}
+            onOpenSwitcher={() => setSwitcherOpen(true)}
+            onOpenMenu={onOpenMenu}
+            onViewSessions={() => setMode('map')}
+          />
+          <View style={styles.exerciseEmpty} testID="exercise-empty">
+            <Text style={styles.exerciseTitle}>Exercises coming soon</Text>
+            <Text style={styles.exerciseBody}>
+              Practice sessions will appear here after lesson content is ready. No practices are
+              created yet.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -500,7 +563,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   topBar: {
     alignItems: 'center',
@@ -527,6 +590,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  exercisePane: {
+    flex: 1,
+    gap: spacing.md,
+  },
   exerciseEmpty: {
     flex: 1,
     gap: spacing.sm,
@@ -552,8 +619,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     gap: spacing.sm,
     padding: spacing.lg,
     paddingBottom: spacing.xl,
@@ -585,8 +652,8 @@ const styles = StyleSheet.create({
   },
   primaryCta: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primaryText,
-    borderRadius: radii.card,
+    backgroundColor: onboardingColors.text,
+    borderRadius: radii.pill,
     marginTop: spacing.sm,
     paddingVertical: spacing.md,
   },

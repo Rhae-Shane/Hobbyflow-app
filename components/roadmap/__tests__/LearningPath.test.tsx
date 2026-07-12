@@ -9,6 +9,7 @@ const baseNode: LearningPathNode = {
   nodeKind: 'lesson',
   id: 'lesson-path-1',
   nodeId: 'node-1',
+  sectionId: 'sec-1',
   label: 'Keeping Time',
   visualState: 'current',
   pathOrder: 0,
@@ -50,7 +51,8 @@ describe('LearningPathNodeView', () => {
 });
 
 describe('LearningPathSectionBar', () => {
-  it('shows progress and journal action', () => {
+  it('shows progress and toggles dropdown', () => {
+    const onToggle = jest.fn();
     const onJournal = jest.fn();
     const { getByText, getByTestId } = render(
       <LearningPathSectionBar
@@ -62,12 +64,16 @@ describe('LearningPathSectionBar', () => {
           completedLessons: 0,
           totalLessons: 3,
         }}
+        expanded={false}
+        onToggle={onToggle}
         onJournalPress={onJournal}
       />,
     );
 
     expect(getByText('1. Rhythm Basics')).toBeTruthy();
     expect(getByText('0/3 lessons')).toBeTruthy();
+    fireEvent.press(getByTestId('section-bar-sec-1'));
+    expect(onToggle).toHaveBeenCalledWith('sec-1');
     fireEvent.press(getByTestId('section-journal-sec-1'));
     expect(onJournal).toHaveBeenCalledWith('sec-1');
   });
@@ -79,6 +85,8 @@ describe('RoadmapPathCard', () => {
     const { getByTestId, getByText } = render(
       <RoadmapPathCard
         title="Drumming Foundations for Beginners"
+        completedLessons={1}
+        totalLessons={4}
         mode="map"
         onModeChange={onModeChange}
         onOpenSwitcher={jest.fn()}
@@ -86,7 +94,7 @@ describe('RoadmapPathCard', () => {
       />,
     );
 
-    expect(getByText('Drumming Foundations for Beginners')).toBeTruthy();
+    expect(getByText('Module: Drumming Foundations for Beginners')).toBeTruthy();
     fireEvent.press(getByTestId('mode-exercise'));
     expect(onModeChange).toHaveBeenCalledWith('exercise');
   });

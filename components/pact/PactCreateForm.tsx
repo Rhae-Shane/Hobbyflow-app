@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
 import dayjs from 'dayjs';
+import { SealPactHoldButton } from '@/components/pact/SealPactHoldButton';
 import { StreakCalendar } from '@/components/streak/StreakCalendar';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { PACT_MIN_DAYS, PACT_PROMISE_MAX_LEN } from '@/lib/pact/constants';
 import {
   earliestEndDate,
@@ -12,7 +13,9 @@ import {
   validatePactDraft,
 } from '@/lib/pact/pactMath';
 import { toDateKey } from '@/lib/gamification/streakMath';
+import type { SealOverlayOrigin } from '@/components/pact/SealPactOverlay';
 import type { HobbyRow } from '@/types/user.types';
+import { hapticSelection } from '@/utils/haptics';
 
 const DURATION_OPTIONS = [
   { id: '7', label: '1 week', days: 7 },
@@ -27,6 +30,10 @@ type DeadlineMode = 'preset' | 'custom';
 type Props = {
   hobbies: HobbyRow[];
   isMutating: boolean;
+  sealHolding: boolean;
+  onSealHoldStart: (origin: SealOverlayOrigin) => void;
+  onSealHoldCancel: () => void;
+  onScrollLockChange?: (locked: boolean) => void;
   onSubmit: (input: {
     hobbyId: string;
     promiseText: string;
@@ -42,7 +49,15 @@ function normalizeDateInput(raw: string): string {
   return trimmed;
 }
 
-export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
+export function PactCreateForm({
+  hobbies,
+  isMutating,
+  sealHolding,
+  onSealHoldStart,
+  onSealHoldCancel,
+  onScrollLockChange,
+  onSubmit,
+}: Props) {
   const startDate = toDateKey();
   const minEnd = earliestEndDate(startDate);
 
@@ -87,8 +102,7 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
     setError(null);
   };
 
-  const handleSeal = async () => {
-    setError(null);
+  const validate = () => {
     const draftError = validatePactDraft({
       hobbyId,
       promiseText,
@@ -96,11 +110,19 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
       endDate,
     });
     if (draftError) {
-      setError(pactValidationMessage(draftError));
-      return;
+      const message = pactValidationMessage(draftError);
+      setError(message);
+      return message;
     }
+    setError(null);
+    return null;
+  };
+
+  const handleSeal = async () => {
+    setError(null);
     const result = await onSubmit({ hobbyId, promiseText, endDate });
     if (!result.ok) setError(result.message);
+    return result;
   };
 
   if (hobbies.length === 0) {
@@ -133,7 +155,10 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
             <Pressable
               key={hobby.id}
               style={[styles.chip, selected && styles.chipSelected]}
-              onPress={() => setHobbyId(hobby.id)}
+              onPress={() => {
+                hapticSelection();
+                setHobbyId(hobby.id);
+              }}
             >
               <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{hobby.name}</Text>
             </Pressable>
@@ -147,7 +172,7 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
         value={promiseText}
         onChangeText={setPromiseText}
         placeholder="Make my jump 6 feet"
-        placeholderTextColor={onboardingColors.textMuted}
+        placeholderTextColor={dashboardColors.textMuted}
         multiline
         maxLength={PACT_PROMISE_MAX_LEN}
       />
@@ -166,7 +191,10 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
             <Pressable
               key={opt.id}
               style={[styles.chip, selected && styles.chipSelected]}
-              onPress={() => selectPreset(opt.days)}
+              onPress={() => {
+                hapticSelection();
+                selectPreset(opt.days);
+              }}
             >
               <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{opt.label}</Text>
             </Pressable>
@@ -174,7 +202,10 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
         })}
         <Pressable
           style={[styles.chip, deadlineMode === 'custom' && styles.chipSelected]}
-          onPress={selectCustom}
+          onPress={() => {
+            hapticSelection();
+            selectCustom();
+          }}
           accessibilityLabel="Custom deadline date"
         >
           <Text style={[styles.chipText, deadlineMode === 'custom' && styles.chipTextSelected]}>
@@ -194,7 +225,7 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
               setError(null);
             }}
             placeholder={minEnd}
-            placeholderTextColor={onboardingColors.textMuted}
+            placeholderTextColor={dashboardColors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="numbers-and-punctuation"
@@ -217,55 +248,55 @@ export function PactCreateForm({ hobbies, isMutating, onSubmit }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable
-        style={[styles.primaryBtn, isMutating && styles.btnDisabled]}
-        onPress={() => {
-          void handleSeal();
-        }}
+      <SealPactHoldButton
         disabled={isMutating}
-        accessibilityLabel="Seal the Pact"
-      >
-        <Text style={styles.primaryText}>{isMutating ? 'Sealing…' : 'Seal the Pact'}</Text>
-      </Pressable>
+        holding={sealHolding}
+        onValidate={validate}
+        onHoldStart={onSealHoldStart}
+        onHoldCancel={onSealHoldCancel}
+        onScrollLockChange={onScrollLockChange}
+        onSeal={handleSeal}
+        onError={setError}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     gap: 6,
     padding: spacing.lg,
   },
   emptyTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 17,
     fontWeight: '800',
   },
   emptyBody: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
     lineHeight: 20,
   },
   lead: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: spacing.xs,
   },
   label: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 13,
     fontWeight: '800',
     marginTop: spacing.xs,
@@ -280,32 +311,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: onboardingColors.chipBackground,
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
+    backgroundColor: dashboardColors.background,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.pill,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   chipSelected: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
-    borderColor: onboardingColors.primaryBorder,
+    backgroundColor: dashboardColors.accentSoft,
+    borderColor: dashboardColors.accent,
   },
   chipText: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 13,
     fontWeight: '600',
   },
   chipTextSelected: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontWeight: '800',
   },
   input: {
-    backgroundColor: '#FDFBF0',
-    borderColor: onboardingColors.border,
+    backgroundColor: dashboardColors.background,
+    borderColor: 'rgba(20,20,20,0.06)',
     borderRadius: 12,
     borderWidth: 1,
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 15,
     minHeight: 88,
     padding: spacing.md,
@@ -315,27 +346,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   customLabel: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   dateInput: {
-    backgroundColor: '#FDFBF0',
-    borderColor: onboardingColors.border,
+    backgroundColor: dashboardColors.background,
+    borderColor: 'rgba(20,20,20,0.06)',
     borderRadius: 12,
     borderWidth: 1,
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 16,
     fontWeight: '700',
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
   },
   hint: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
   },
   endDate: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -343,20 +374,5 @@ const styles = StyleSheet.create({
     color: '#9B3B3B',
     fontSize: 13,
     fontWeight: '600',
-  },
-  primaryBtn: {
-    alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: radii.card,
-    marginTop: spacing.sm,
-    paddingVertical: 14,
-  },
-  primaryText: {
-    color: onboardingColors.primaryText,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  btnDisabled: {
-    opacity: 0.6,
   },
 });

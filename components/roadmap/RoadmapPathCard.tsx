@@ -1,150 +1,210 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { onboardingColors } from '@/constants/onboardingTokens';
+import { theme } from '@/constants/theme';
 import { radii, spacing } from '@/constants/tokens';
 
 export type PathMode = 'map' | 'exercise';
 
 type Props = {
   title: string;
+  subtitle?: string;
+  completedLessons: number;
+  totalLessons: number;
   coverUri?: string | null;
   mode: PathMode;
   onModeChange: (mode: PathMode) => void;
   onOpenSwitcher: () => void;
   onOpenMenu: () => void;
+  onViewSessions?: () => void;
 };
 
 export function RoadmapPathCard({
   title,
-  coverUri,
+  subtitle = 'Your learning path',
+  completedLessons,
+  totalLessons,
   mode,
   onModeChange,
   onOpenSwitcher,
   onOpenMenu,
+  onViewSessions,
 }: Props) {
+  const progress = totalLessons > 0 ? Math.min(1, completedLessons / totalLessons) : 0;
+
   return (
     <View style={styles.card} testID="roadmap-path-card">
       <View style={styles.topRow}>
-        <View style={styles.thumb}>
-          {coverUri ? (
-            <Image source={{ uri: coverUri }} style={styles.thumbImage} />
-          ) : (
-            <Text style={styles.thumbPlaceholder}>HF</Text>
-          )}
-        </View>
-        <Pressable style={styles.titleBlock} onPress={onOpenSwitcher} accessibilityLabel="Switch roadmap">
-          <Text style={styles.title} numberOfLines={2}>
-            {title}
-          </Text>
-          <Text style={styles.chevron}>▾</Text>
-        </Pressable>
         <Pressable
+          style={styles.stackBadge}
           onPress={onOpenMenu}
           accessibilityLabel="Roadmap menu"
-          style={styles.menuBtn}
           testID="roadmap-menu"
         >
-          <Text style={styles.menuDots}>⋮</Text>
+          <Text style={styles.stackIcon}>▤</Text>
         </Pressable>
+        <View style={styles.modeRow}>
+          <Pressable
+            style={[styles.modePill, mode === 'map' && styles.modePillActive]}
+            onPress={() => onModeChange('map')}
+            testID="mode-map"
+          >
+            <Text style={[styles.modePillText, mode === 'map' && styles.modePillTextActive]}>
+              Lessons
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modePill, mode === 'exercise' && styles.modePillActive]}
+            onPress={() => onModeChange('exercise')}
+            testID="mode-exercise"
+          >
+            <Text
+              style={[styles.modePillText, mode === 'exercise' && styles.modePillTextActive]}
+            >
+              Exercises
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
-      <View style={styles.modes}>
-        <Pressable
-          style={[styles.mode, mode === 'map' && styles.modeActive]}
-          onPress={() => onModeChange('map')}
-          testID="mode-map"
-        >
-          <Text style={[styles.modeText, mode === 'map' && styles.modeTextActive]}>Map</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.mode, mode === 'exercise' && styles.modeActive]}
-          onPress={() => onModeChange('exercise')}
-          testID="mode-exercise"
-        >
-          <Text style={[styles.modeText, mode === 'exercise' && styles.modeTextActive]}>
-            Exercise
-          </Text>
-        </Pressable>
+      <View style={styles.heroArt} pointerEvents="none">
+        <View style={styles.heroRing}>
+          <Text style={styles.heroGlyph}>◎</Text>
+        </View>
       </View>
+
+      <Pressable onPress={onOpenSwitcher} accessibilityLabel="Switch roadmap">
+        <Text style={styles.title} numberOfLines={2}>
+          Module: {title}
+        </Text>
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </Pressable>
+
+      <View style={styles.progressTrack} testID="module-progress">
+        <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+      </View>
+
+      <Pressable
+        style={styles.cta}
+        onPress={onViewSessions}
+        testID="view-sessions-cta"
+        accessibilityRole="button"
+      >
+        <Text style={styles.ctaText}>VIEW SESSIONS</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: theme.colors.navActiveSoft,
+    borderRadius: 28,
     gap: spacing.sm,
-    padding: spacing.md,
+    overflow: 'hidden',
+    padding: spacing.lg,
+    shadowColor: theme.shadow.color,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
   },
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
   },
-  thumb: {
+  stackBadge: {
     alignItems: 'center',
-    backgroundColor: '#E8F6FE',
-    borderRadius: 12,
-    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radii.avatar,
+    height: 36,
     justifyContent: 'center',
-    overflow: 'hidden',
-    width: 48,
+    width: 36,
   },
-  thumbImage: {
-    height: '100%',
-    width: '100%',
-  },
-  thumbPlaceholder: {
-    color: onboardingColors.primaryText,
-    fontSize: 14,
+  stackIcon: {
+    color: onboardingColors.text,
+    fontSize: 16,
     fontWeight: '800',
   },
-  titleBlock: {
-    alignItems: 'center',
-    flex: 1,
+  modeRow: {
     flexDirection: 'row',
     gap: 6,
   },
-  title: {
-    color: onboardingColors.text,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  chevron: {
-    color: onboardingColors.textMuted,
-    fontSize: 14,
-  },
-  menuBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-  menuDots: {
-    color: onboardingColors.text,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  modes: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  mode: {
+  modePill: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
     borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  modeActive: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
+  modePillActive: {
+    backgroundColor: '#FFFFFF',
   },
-  modeText: {
+  modePillText: {
     color: onboardingColors.textMuted,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
-  modeTextActive: {
-    color: onboardingColors.primaryText,
-    fontWeight: '700',
+  modePillTextActive: {
+    color: onboardingColors.text,
+    fontWeight: '800',
+  },
+  heroArt: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  heroRing: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 48,
+    height: 88,
+    justifyContent: 'center',
+    width: 88,
+  },
+  heroGlyph: {
+    color: onboardingColors.text,
+    fontSize: 36,
+    fontWeight: '300',
+  },
+  title: {
+    color: onboardingColors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  subtitle: {
+    color: onboardingColors.text,
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+    opacity: 0.75,
+    textAlign: 'center',
+  },
+  progressTrack: {
+    backgroundColor: 'rgba(91, 159, 232, 0.35)',
+    borderRadius: radii.pill,
+    height: 8,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  progressFill: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.pill,
+    height: '100%',
+  },
+  cta: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.cta,
+    borderRadius: radii.pill,
+    marginTop: spacing.xs,
+    paddingVertical: 14,
+  },
+  ctaText: {
+    color: theme.colors.ctaText,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
 });

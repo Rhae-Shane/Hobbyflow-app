@@ -3,6 +3,7 @@ import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { canFulfillPact, daysRemaining } from '@/lib/pact/pactMath';
 import type { UserPactRow } from '@/types/pact.types';
+import { hapticSuccess, hapticWarning } from '@/utils/haptics';
 
 type Props = {
   pact: UserPactRow;
@@ -38,7 +39,10 @@ export function ActivePactCard({ pact, isMutating, onComplete, onAbandon }: Prop
 
       <Pressable
         style={[styles.primaryBtn, completeDisabled && styles.btnDisabled]}
-        onPress={onComplete}
+        onPress={() => {
+          hapticSuccess();
+          onComplete();
+        }}
         disabled={completeDisabled}
         accessibilityLabel="Complete pact"
       >
@@ -55,7 +59,10 @@ export function ActivePactCard({ pact, isMutating, onComplete, onAbandon }: Prop
 
       <Pressable
         style={[styles.secondaryBtn, isMutating && styles.btnDisabled]}
-        onPress={onAbandon}
+        onPress={() => {
+          hapticWarning();
+          onAbandon();
+        }}
         disabled={isMutating}
         accessibilityLabel="Abandon pact"
       >
@@ -67,7 +74,7 @@ export function ActivePactCard({ pact, isMutating, onComplete, onAbandon }: Prop
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F7F3EA',
+    backgroundColor: '#F7F8FA',
     borderColor: onboardingColors.border,
     borderRadius: radii.card,
     borderWidth: 1,

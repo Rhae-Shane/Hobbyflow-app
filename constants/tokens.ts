@@ -1,12 +1,14 @@
+import { theme } from '@/constants/theme';
+
 export const colors = {
-  background: '#F7F8FA',
-  surface: '#FFFFFF',
-  text: '#1A1D26',
-  textMuted: '#6B7280',
-  border: '#E5E7EB',
-  primary: '#4F46E5',
-  success: '#059669',
-  skipped: '#9CA3AF',
+  background: theme.colors.background,
+  surface: theme.colors.surface,
+  text: theme.colors.text,
+  textMuted: theme.colors.textMuted,
+  border: theme.colors.border,
+  primary: theme.colors.accentDeep,
+  success: theme.colors.success,
+  skipped: theme.colors.textMuted,
 } as const;
 
 export const spacing = {
@@ -18,6 +20,6 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  card: 16,
-  pill: 999,
+  card: theme.radii.card,
+  pill: theme.radii.pill,
 } as const;

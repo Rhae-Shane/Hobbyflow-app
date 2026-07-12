@@ -4,10 +4,10 @@ import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
 import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
 import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
+import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
 import { InlineError } from '@/components/ui/InlineError';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii, quickActionPalette } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
 import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { signOut } from '@/lib/auth';
@@ -136,18 +136,20 @@ export function ProfileScreen() {
   };
 
   return (
+    <ScreenShell padded={false}>
     <ScrollView
-      style={styles.container}
       contentContainerStyle={{
-        paddingTop: spacing.md,
-        paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24,
+        paddingBottom: TAB_SCROLL_BOTTOM_INSET,
         paddingHorizontal: spacing.md,
         gap: spacing.md,
       }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
+        <View>
+          <Text style={styles.eyebrow}>HobbyFlow</Text>
+          <Text style={styles.title}>Profile</Text>
+        </View>
         <View style={styles.headerActions}>
           <Pressable
             style={styles.settingsBtn}
@@ -200,8 +202,8 @@ export function ProfileScreen() {
           <Pressable style={styles.editBtn} onPress={() => void onShare()}>
             <Text style={styles.editText}>SHARE</Text>
           </Pressable>
-          <Pressable style={styles.editBtn} onPress={onNewPost}>
-            <Text style={styles.editText}>NEW POST</Text>
+          <Pressable style={styles.primaryBtn} onPress={onNewPost}>
+            <Text style={styles.primaryBtnText}>NEW POST</Text>
           </Pressable>
         </View>
       </View>
@@ -210,18 +212,22 @@ export function ProfileScreen() {
       <ProfilePostsGrid posts={posts} emptyHint="Share your first hobby post." />
 
       <Text style={styles.sectionTitle}>My Progress</Text>
-      <View style={styles.listCard}>
-        {PROGRESS_LINKS.map((item, index) => (
-          <Pressable
-            key={item.id}
-            style={[styles.listRow, index < PROGRESS_LINKS.length - 1 && styles.listRowBorder]}
-            onPress={() => router.push(item.href as never)}
-          >
-            <Text style={styles.listIcon}>{item.icon}</Text>
-            <Text style={styles.listLabel}>{item.label}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </Pressable>
-        ))}
+      <View style={styles.tileGrid}>
+        {PROGRESS_LINKS.map((item, index) => {
+          const palette = quickActionPalette[index % quickActionPalette.length];
+          return (
+            <Pressable
+              key={item.id}
+              style={[styles.tile, { backgroundColor: palette.background }]}
+              onPress={() => router.push(item.href as never)}
+            >
+              <View style={[styles.tileIcon, { backgroundColor: palette.iconBg }]}>
+                <Text style={styles.listIcon}>{item.icon}</Text>
+              </View>
+              <Text style={styles.tileLabel}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {signOutError ? <InlineError message={signOutError} /> : null}
@@ -246,14 +252,11 @@ export function ProfileScreen() {
         </>
       ) : null}
     </ScrollView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: onboardingColors.background,
-    flex: 1,
-  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -263,70 +266,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  eyebrow: {
+    color: dashboardColors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   title: {
-    color: onboardingColors.text,
-    fontSize: 32,
+    color: dashboardColors.text,
+    fontSize: 28,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   settingsBtn: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 12,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: 14,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   settingsGlyph: {
     fontSize: 18,
   },
   claimBanner: {
-    backgroundColor: '#E8F6FE',
-    borderColor: onboardingColors.primaryBorder,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: '#F3EAF8',
+    borderRadius: dashboardRadii.block,
     gap: 4,
     padding: spacing.md,
   },
   claimTitle: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontSize: 15,
     fontWeight: '800',
   },
   claimSub: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
   },
   card: {
     alignItems: 'center',
-    backgroundColor: '#F7F3EA',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     gap: spacing.sm,
     padding: spacing.lg,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: 36,
+    backgroundColor: '#FFD6A8',
+    borderRadius: dashboardRadii.avatar,
     height: 72,
     justifyContent: 'center',
     width: 72,
   },
   avatarText: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontSize: 28,
     fontWeight: '800',
   },
   name: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 22,
     fontWeight: '800',
   },
   bio: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -339,12 +346,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statItem: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },
   statDivider: {
-    backgroundColor: onboardingColors.border,
+    backgroundColor: 'rgba(20,20,20,0.1)',
     height: 16,
     width: 1,
   },
@@ -356,65 +363,68 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   editBtn: {
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.background,
+    borderRadius: dashboardRadii.pill,
     paddingHorizontal: 18,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   editText: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  primaryBtn: {
+    backgroundColor: dashboardColors.cta,
+    borderRadius: dashboardRadii.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  primaryBtnText: {
+    color: dashboardColors.ctaText,
     fontSize: 12,
     fontWeight: '800',
   },
   sectionTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 18,
     fontWeight: '800',
     marginTop: spacing.xs,
   },
-  listCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  listRow: {
-    alignItems: 'center',
+  tileGrid: {
     flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  listRowBorder: {
-    borderBottomColor: onboardingColors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  tile: {
+    borderRadius: dashboardRadii.tile,
+    gap: 10,
+    padding: spacing.md,
+    width: '47.5%',
+  },
+  tileIcon: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
   },
   listIcon: {
-    fontSize: 18,
-    width: 24,
+    fontSize: 16,
   },
-  listLabel: {
-    color: onboardingColors.text,
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  chevron: {
-    color: onboardingColors.textMuted,
-    fontSize: 22,
+  tileLabel: {
+    color: dashboardColors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   signOut: {
     alignItems: 'center',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     marginTop: spacing.sm,
     paddingVertical: spacing.md,
   },
   signOutText: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontWeight: '700',
   },
 });

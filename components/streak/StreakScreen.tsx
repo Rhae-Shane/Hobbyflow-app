@@ -6,8 +6,9 @@ import { RankingList } from '@/components/streak/RankingList';
 import { StreakCalendar } from '@/components/streak/StreakCalendar';
 import { StreakHeroCard } from '@/components/streak/StreakHeroCard';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { ScreenShell } from '@/components/ui/ScreenShell';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
 import { daysRemaining } from '@/lib/pact/pactMath';
 import { useGamificationStore } from '@/store/useGamificationStore';
@@ -33,15 +34,18 @@ export function StreakScreen() {
   const leagueId = useGamificationStore((s) => s.leagueId);
   const leagues = useGamificationStore((s) => s.leagues);
   const hydratePact = usePactStore((s) => s.hydrate);
-  const activePact = usePactStore((s) => s.activePact);
+  const activePacts = usePactStore((s) => s.activePacts);
 
-  const pactRange = useMemo(
+  const pactRanges = useMemo(
     () =>
-      activePact
-        ? { startDate: activePact.start_date, endDate: activePact.end_date }
-        : null,
-    [activePact],
+      activePacts.map((pact) => ({
+        startDate: pact.start_date,
+        endDate: pact.end_date,
+      })),
+    [activePacts],
   );
+
+  const nearestPact = activePacts[0] ?? null;
 
   useFocusEffect(
     useCallback(() => {
@@ -53,23 +57,10 @@ export function StreakScreen() {
   );
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityLabel="Go back"
-        >
-          <Text style={styles.backGlyph}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>My Streak</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
+    <ScreenShell>
       <ScrollView
         contentContainerStyle={{
           paddingBottom: 32,
-          paddingHorizontal: spacing.md,
           gap: spacing.md,
         }}
         showsVerticalScrollIndicator={false}
@@ -78,7 +69,7 @@ export function StreakScreen() {
         <StreakCalendar
           activityDates={activityDates}
           saverUsedDates={saverUsedDates}
-          pactRange={pactRange}
+          pactRanges={pactRanges}
         />
 
         <Pressable
@@ -90,11 +81,13 @@ export function StreakScreen() {
           <View style={styles.pactBody}>
             <Text style={styles.pactTitle}>The Pact</Text>
             <Text style={styles.pactMeta} numberOfLines={2}>
-              {activePact
-                ? `${activePact.hobby_name ?? 'Hobby'} · ${daysRemaining(activePact.end_date)}d to deadline`
-                : pactsFulfilled > 0
-                  ? `${pactsFulfilled} kept · seal a new goal`
-                  : 'Seal a goal with a deadline'}
+              {activePacts.length > 1
+                ? `${activePacts.length} active · next due in ${daysRemaining(nearestPact!.end_date)}d`
+                : nearestPact
+                  ? `${nearestPact.hobby_name ?? 'Hobby'} · ${daysRemaining(nearestPact.end_date)}d to deadline`
+                  : pactsFulfilled > 0
+                    ? `${pactsFulfilled} kept · seal a new goal`
+                    : 'Seal a goal with a deadline'}
             </Text>
           </View>
           <Text style={styles.pactChevron}>›</Text>
@@ -143,85 +136,48 @@ export function StreakScreen() {
         <Text style={styles.sectionSub}>Top learners by rating</Text>
         <RankingList entries={leaderboard} myRank={myRank} leagues={leagues} />
       </ScrollView>
-    </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    backgroundColor: onboardingColors.background,
-    flex: 1,
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backBtn: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  backGlyph: {
-    color: onboardingColors.text,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    color: onboardingColors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  headerSpacer: {
-    width: 40,
-  },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   statCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     flex: 1,
     gap: 4,
     padding: spacing.md,
   },
-  leagueCard: {
-    justifyContent: 'center',
-  },
   leagueCardFull: {
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
   },
   statValue: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 24,
     fontWeight: '800',
   },
   statLabel: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
     fontWeight: '600',
   },
   pactCard: {
     alignItems: 'center',
-    backgroundColor: '#F7F3EA',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
@@ -235,23 +191,23 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   pactTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   pactMeta: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
   },
   pactChevron: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 22,
   },
   saverCard: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
@@ -265,27 +221,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   saverTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   saverMeta: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
   },
   saverCount: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 16,
     fontWeight: '800',
   },
   sectionTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 18,
     fontWeight: '800',
     marginTop: spacing.xs,
   },
   sectionSub: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
     marginTop: -8,
   },

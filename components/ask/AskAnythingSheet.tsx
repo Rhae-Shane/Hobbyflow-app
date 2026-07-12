@@ -1,25 +1,35 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AskChatTranscript } from '@/components/ask/AskChatTranscript';
-import { AskFadeIn } from '@/components/ask/AskFadeIn';
+import { AskCompanionHero } from '@/components/ask/AskCompanionHero';
 import { AskHistoryList } from '@/components/ask/AskHistoryList';
-import { AskCoachLottie } from '@/components/ask/AskLottie';
 import { AskPressable } from '@/components/ask/AskPressable';
+import { AskRoadmapPreview } from '@/components/ask/AskRoadmapPreview';
 import { AskSheetTopBar } from '@/components/ask/AskSheetTopBar';
-import { ASK_QUICK_ACTIONS } from '@/components/ask/askQuickActions';
+import { AskSuggestionChips } from '@/components/ask/AskSuggestionChips';
+import { ASK_SUGGESTION_CHIPS } from '@/components/ask/askQuickActions';
 import { SendIcon } from '@/components/icons/AppIcons';
-import { onboardingColors } from '@/constants/onboardingTokens';
+import {
+  askCompanionColors,
+  askCompanionRadii,
+} from '@/constants/askCompanionTokens';
 import { spacing } from '@/constants/tokens';
 import { useAskAnythingChat } from '@/hooks/useAskAnythingChat';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
+import { useGamificationStore } from '@/store/useGamificationStore';
+import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
 
 type Props = {
   visible: boolean;
@@ -29,15 +39,52 @@ type Props = {
 
 export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [draft, setDraft] = useState('');
+  const [activeChip, setActiveChip] = useState<string | null>('lessons');
+  const inputRef = useRef<TextInput>(null);
   const chat = useAskAnythingChat({ activeHobbyHint });
   const sheetY = useRef(new Animated.Value(40)).current;
   const sheetOpacity = useRef(new Animated.Value(0)).current;
+
+  const activityDates = useGamificationStore((s) => s.activityDates);
+  const selectedRoadmapId = useRoadmapUiStore((s) => s.selectedRoadmapId);
+
+  const roadmapsQuery = useQuery({
+    queryKey: ['user-roadmaps', user?.id],
+    queryFn: () => fetchUserRoadmaps(user!.id),
+    enabled: Boolean(user?.id) && visible,
+  });
+
+  const activeRoadmap = useMemo(() => {
+    const rows = roadmapsQuery.data ?? [];
+    return (
+      rows.find((r) => r.id === selectedRoadmapId) ??
+      rows.find((r) => r.status === 'active') ??
+      rows[0] ??
+      null
+    );
+  }, [roadmapsQuery.data, selectedRoadmapId]);
+
+  const detailQuery = useQuery({
+    queryKey: ['roadmap-detail', activeRoadmap?.id],
+    queryFn: () => fetchRoadmapDetail(activeRoadmap!.id),
+    enabled: Boolean(activeRoadmap?.id) && visible && chat.view === 'new',
+    staleTime: 60_000,
+  });
+
+  const progressPercent = useMemo(() => {
+    const lessons = detailQuery.data?.lessons ?? [];
+    if (lessons.length === 0) return 0;
+    const done = lessons.filter((l) => l.status === 'completed').length;
+    return (done / lessons.length) * 100;
+  }, [detailQuery.data?.lessons]);
 
   useEffect(() => {
     if (visible) {
       chat.newChat();
       setDraft('');
+      setActiveChip('lessons');
       sheetY.setValue(48);
       sheetOpacity.setValue(0);
       Animated.parallel([
@@ -65,7 +112,16 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
     await chat.send(value);
   };
 
+  const focusInput = () => {
+    inputRef.current?.focus();
+  };
+
   const canSend = Boolean(draft.trim()) && !chat.sending;
+  const suggestions = ASK_SUGGESTION_CHIPS.map((c) => ({
+    id: c.id,
+    label: c.label,
+    seedMessage: c.seedMessage,
+  }));
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
@@ -77,24 +133,17 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
             {
               opacity: sheetOpacity,
               paddingBottom: Math.max(insets.bottom, 16),
+              paddingTop: Math.max(insets.top, 12),
               transform: [{ translateY: sheetY }],
             },
           ]}
         >
-          <View style={styles.ambientOrbA} />
-          <View style={styles.ambientOrbB} />
-
-          <View style={styles.handle} />
           <AskSheetTopBar
-            title={chat.view === 'chatting' ? chat.title : null}
-            onNewChat={() => {
-              chat.newChat();
-              setDraft('');
-            }}
-            onHistory={() => {
+            title={chat.view === 'chatting' && chat.title ? chat.title : 'Hobby Companion'}
+            onBack={onClose}
+            onMenu={() => {
               void chat.openHistory();
             }}
-            onClose={onClose}
           />
 
           {chat.view === 'history' ? (
@@ -115,86 +164,109 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
           ) : null}
 
           {chat.view === 'new' ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.newContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <AskCompanionHero
+                onMicPress={focusInput}
+                onAttachPress={() => {
+                  void chat.openHistory();
+                }}
+                onMenuPress={() => {
+                  void chat.openHistory();
+                }}
+              />
+
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLeft}>✦ Ready to help</Text>
+                <Text style={styles.metaRight}>Powered by HobbyFlow AI</Text>
+              </View>
+
+              <View style={styles.inputRow}>
+                <TextInput
+                  ref={inputRef}
+                  editable={!chat.sending}
+                  value={draft}
+                  onChangeText={setDraft}
+                  onSubmitEditing={() => {
+                    void handleSend();
+                  }}
+                  placeholder="Ask me anything.."
+                  placeholderTextColor={askCompanionColors.textMuted}
+                  style={styles.input}
+                  returnKeyType="send"
+                />
+                <AskPressable
+                  onPress={() => {
+                    void handleSend();
+                  }}
+                  disabled={!canSend}
+                  style={[styles.sendBtn, !canSend && styles.sendDisabled]}
+                  accessibilityLabel="Send"
+                >
+                  <SendIcon size={18} color="#FFFFFF" />
+                </AskPressable>
+              </View>
+
+              <AskSuggestionChips
+                suggestions={suggestions}
+                activeId={activeChip}
+                onSelect={(item) => {
+                  setActiveChip(item.id);
+                  if (item.id === 'history') {
+                    void chat.openHistory();
+                    return;
+                  }
+                  if (item.seedMessage) {
+                    void handleSend(item.seedMessage);
+                  }
+                }}
+              />
+
+              <AskRoadmapPreview
+                activityDates={activityDates}
+                progressPercent={progressPercent}
+                roadmapTitle={activeRoadmap?.title}
+              />
+            </ScrollView>
+          ) : null}
+
+          {chat.view === 'chatting' ? (
             <>
-              <AskFadeIn style={styles.promo}>
-                <AskCoachLottie size={52} />
-                <View style={styles.bubble}>
-                  <Text style={styles.bubbleEyebrow}>Your coach</Text>
-                  <Text style={styles.bubbleText}>
-                    Ask about your roadmaps, lessons, streak, pact, posts — I can look up your
-                    HobbyFlow data.
-                  </Text>
-                </View>
-              </AskFadeIn>
-
-              <AskFadeIn delay={80}>
-                <Text style={styles.heading}>How can I help you today?</Text>
-              </AskFadeIn>
-
-              <View style={styles.actions}>
-                {ASK_QUICK_ACTIONS.map((action, index) => {
-                  const Icon = action.Icon;
-                  return (
-                    <AskFadeIn key={action.id} delay={120 + index * 70}>
-                      <AskPressable
-                        style={styles.actionRow}
-                        onPress={() => {
-                          if (action.id === 'history') {
-                            void chat.openHistory();
-                            return;
-                          }
-                          if (action.seedMessage) {
-                            void handleSend(action.seedMessage);
-                          }
-                        }}
-                        accessibilityLabel={action.label}
-                      >
-                        <View style={styles.actionIconWrap}>
-                          <Icon size={20} color={onboardingColors.text} />
-                        </View>
-                        <View style={styles.actionCopy}>
-                          <Text style={styles.actionLabel}>{action.label}</Text>
-                          <Text style={styles.actionHint}>{action.hint}</Text>
-                        </View>
-                      </AskPressable>
-                    </AskFadeIn>
-                  );
-                })}
+              <AskChatTranscript messages={chat.messages} sending={chat.sending} />
+              {chat.error ? <Text style={styles.error}>{chat.error}</Text> : null}
+              <View style={styles.inputRow}>
+                <TextInput
+                  ref={inputRef}
+                  editable={!chat.sending}
+                  value={draft}
+                  onChangeText={setDraft}
+                  onSubmitEditing={() => {
+                    void handleSend();
+                  }}
+                  placeholder="Ask me anything.."
+                  placeholderTextColor={askCompanionColors.textMuted}
+                  style={styles.input}
+                  returnKeyType="send"
+                />
+                <AskPressable
+                  onPress={() => {
+                    void handleSend();
+                  }}
+                  disabled={!canSend}
+                  style={[styles.sendBtn, !canSend && styles.sendDisabled]}
+                  accessibilityLabel="Send"
+                >
+                  <SendIcon size={18} color="#FFFFFF" />
+                </AskPressable>
               </View>
             </>
           ) : null}
 
-          {chat.view === 'chatting' ? (
-            <AskChatTranscript messages={chat.messages} sending={chat.sending} />
-          ) : null}
-
-          {chat.error ? <Text style={styles.error}>{chat.error}</Text> : null}
-
-          {chat.view !== 'history' ? (
-            <View style={styles.inputRow}>
-              <TextInput
-                editable={!chat.sending}
-                value={draft}
-                onChangeText={setDraft}
-                onSubmitEditing={() => {
-                  void handleSend();
-                }}
-                placeholder="Ask anything about your learning..."
-                placeholderTextColor={onboardingColors.textMuted}
-                style={styles.input}
-                returnKeyType="send"
-              />
-              <AskPressable
-                onPress={() => {
-                  void handleSend();
-                }}
-                disabled={!canSend}
-                style={[styles.sendBtn, !canSend && styles.sendDisabled]}
-                accessibilityLabel="Send"
-              >
-                <SendIcon size={18} color="#FFFFFF" />
-              </AskPressable>
-            </View>
+          {chat.view === 'new' && chat.error ? (
+            <Text style={styles.error}>{chat.error}</Text>
           ) : null}
         </Animated.View>
       </View>
@@ -204,152 +276,68 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: {
-    backgroundColor: 'rgba(44, 36, 22, 0.42)',
+    backgroundColor: 'rgba(20, 20, 20, 0.35)',
     flex: 1,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: onboardingColors.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: askCompanionColors.background,
+    borderTopLeftRadius: askCompanionRadii.sheet,
+    borderTopRightRadius: askCompanionRadii.sheet,
+    flex: 1,
+    marginTop: 8,
+    maxHeight: '96%',
+    paddingHorizontal: spacing.md,
+  },
+  newContent: {
     gap: spacing.md,
-    maxHeight: '92%',
-    overflow: 'hidden',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
-  ambientOrbA: {
-    backgroundColor: 'rgba(124, 203, 250, 0.18)',
-    borderRadius: 120,
-    height: 180,
-    left: -48,
-    position: 'absolute',
-    top: -60,
-    width: 180,
-  },
-  ambientOrbB: {
-    backgroundColor: 'rgba(237, 232, 223, 0.9)',
-    borderRadius: 100,
-    height: 140,
-    position: 'absolute',
-    right: -36,
-    top: 80,
-    width: 140,
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: '#D4CEC4',
-    borderRadius: 2,
-    height: 4,
-    marginBottom: spacing.xs,
-    width: 40,
-    zIndex: 1,
-  },
-  promo: {
+  metaRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    zIndex: 1,
+    justifyContent: 'space-between',
   },
-  bubble: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderColor: onboardingColors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    flex: 1,
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  bubbleEyebrow: {
-    color: onboardingColors.primaryText,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  bubbleText: {
-    color: onboardingColors.text,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  heading: {
-    color: onboardingColors.text,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    zIndex: 1,
-  },
-  actions: {
-    gap: spacing.sm,
-    zIndex: 1,
-  },
-  actionRow: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    borderColor: onboardingColors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-  },
-  actionIconWrap: {
-    alignItems: 'center',
-    backgroundColor: '#F3EEE6',
-    borderRadius: 14,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  actionCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  actionLabel: {
-    color: onboardingColors.text,
-    fontSize: 15,
+  metaLeft: {
+    color: askCompanionColors.text,
+    fontSize: 13,
     fontWeight: '700',
   },
-  actionHint: {
-    color: onboardingColors.textMuted,
+  metaRight: {
+    color: askCompanionColors.textMuted,
     fontSize: 12,
+    fontWeight: '600',
   },
   error: {
     color: '#A14A3A',
     fontSize: 13,
-    zIndex: 1,
+    marginTop: spacing.xs,
   },
   inputRow: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 20,
+    backgroundColor: askCompanionColors.surface,
+    borderColor: askCompanionColors.chipBorder,
+    borderRadius: askCompanionRadii.input,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
-    padding: spacing.sm,
-    shadowColor: '#2C2416',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    zIndex: 1,
+    paddingHorizontal: 6,
+    paddingLeft: spacing.md,
+    paddingVertical: 6,
   },
   input: {
-    color: onboardingColors.text,
+    color: askCompanionColors.text,
     flex: 1,
     fontSize: 15,
-    minHeight: 40,
-    paddingHorizontal: spacing.sm,
+    minHeight: 42,
   },
   sendBtn: {
     alignItems: 'center',
-    backgroundColor: '#2C2416',
-    borderRadius: 14,
-    height: 42,
+    backgroundColor: askCompanionColors.cta,
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
-    width: 42,
+    width: 44,
   },
   sendDisabled: {
     opacity: 0.35,

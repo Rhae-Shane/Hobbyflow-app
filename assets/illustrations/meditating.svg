@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <!-- Open Doodlesinspired meditating figure (CC0-style line art for HobbyFlow) -->
+  <ellipse cx="80" cy="148" rx="42" ry="6" fill="#1C1A17" opacity="0.12"/>
+  <circle cx="80" cy="42" r="18" stroke="#1C1A17" stroke-width="3"/>
+  <path d="M62 70C62 70 68 96 80 96C92 96 98 70 98 70" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+  <path d="M62 78C48 86 40 98 38 112" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+  <path d="M98 78C112 86 120 98 122 112" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+  <path d="M70 96C62 112 54 124 48 132" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+  <path d="M90 96C98 112 106 124 112 132" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+  <path d="M48 132C56 128 68 126 80 126C92 126 104 128 112 132" stroke="#1C1A17" stroke-width="3" stroke-linecap="round"/>
+</svg>

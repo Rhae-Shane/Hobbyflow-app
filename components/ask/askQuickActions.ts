@@ -1,25 +1,30 @@
-import { FeedbackIcon, HistoryIcon, LessonsIcon } from '@/components/icons/AppIcons';
-
-export const ASK_QUICK_ACTIONS = [
+export const ASK_SUGGESTION_CHIPS = [
   {
-    id: 'lessons' as const,
-    label: 'Ask questions about lessons',
-    hint: 'Practice tips from your roadmaps',
-    Icon: LessonsIcon,
+    id: 'lessons',
+    label: 'Review my lessons',
     seedMessage: 'Help me with my current lessons and what I should practice next.',
   },
   {
-    id: 'feedback' as const,
+    id: 'streak',
+    label: 'Check my streak',
+    seedMessage: 'How is my streak looking and what should I do today to keep it?',
+  },
+  {
+    id: 'roadmap',
+    label: 'What’s next on my roadmap?',
+    seedMessage: 'What should I focus on next in my active roadmap?',
+  },
+  {
+    id: 'feedback',
     label: 'Share feedback',
-    hint: "Tell us what's working or missing",
-    Icon: FeedbackIcon,
     seedMessage: 'I want to share feedback about HobbyFlow.',
   },
   {
-    id: 'history' as const,
-    label: 'Continue a past conversation',
-    hint: 'Pick up where you left off',
-    Icon: HistoryIcon,
+    id: 'history',
+    label: 'Past chats',
     seedMessage: null,
   },
-];
+] as const;
+
+/** @deprecated Prefer ASK_SUGGESTION_CHIPS — kept for any legacy imports. */
+export const ASK_QUICK_ACTIONS = ASK_SUGGESTION_CHIPS;

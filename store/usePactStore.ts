@@ -11,7 +11,7 @@ import {
 import { toDateKey } from '@/lib/gamification/streakMath';
 import {
   createPact,
-  fetchActivePact,
+  fetchActivePacts,
   fetchPactHistory,
   markPactBroken,
   markPactFulfilled,
@@ -24,7 +24,7 @@ const log = createLogger('pact-store');
 
 type PactState = {
   userId: string | null;
-  activePact: UserPactRow | null;
+  activePacts: UserPactRow[];
   history: UserPactRow[];
   hydrationStatus: 'idle' | 'loading' | 'done';
   isMutating: boolean;
@@ -37,8 +37,8 @@ type PactState = {
     promiseText: string;
     endDate: string;
   }) => Promise<{ ok: true } | { ok: false; message: string }>;
-  fulfillActivePact: () => Promise<{ ok: true } | { ok: false; message: string }>;
-  abandonActivePact: () => Promise<{ ok: true } | { ok: false; message: string }>;
+  fulfillPact: (pactId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  abandonPact: (pactId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 };
 
 async function applyBreakPenalty(userId: string): Promise<void> {
@@ -62,22 +62,26 @@ async function applyBreakPenalty(userId: string): Promise<void> {
   });
 }
 
-async function resolveExpiredActive(
+async function resolveExpiredActives(
   userId: string,
-  active: UserPactRow | null,
-): Promise<UserPactRow | null> {
-  if (!active || active.status !== 'active') return active;
-  if (!isPactExpired(active.end_date)) return active;
-
-  const broken = await markPactBroken(active.id, userId);
-  await applyBreakPenalty(userId);
-  log.info('Expired pact resolved as broken', { userId, pactId: active.id });
-  return broken;
+  actives: UserPactRow[],
+): Promise<UserPactRow[]> {
+  const stillActive: UserPactRow[] = [];
+  for (const active of actives) {
+    if (active.status !== 'active' || !isPactExpired(active.end_date)) {
+      if (active.status === 'active') stillActive.push(active);
+      continue;
+    }
+    await markPactBroken(active.id, userId);
+    await applyBreakPenalty(userId);
+    log.info('Expired pact resolved as broken', { userId, pactId: active.id });
+  }
+  return stillActive;
 }
 
 export const usePactStore = create<PactState>((set, get) => ({
   userId: null,
-  activePact: null,
+  activePacts: [],
   history: [],
   hydrationStatus: 'idle',
   isMutating: false,
@@ -88,7 +92,7 @@ export const usePactStore = create<PactState>((set, get) => ({
   clearSession: () =>
     set({
       userId: null,
-      activePact: null,
+      activePacts: [],
       history: [],
       hydrationStatus: 'idle',
       isMutating: false,
@@ -98,16 +102,10 @@ export const usePactStore = create<PactState>((set, get) => ({
   hydrate: async (userId) => {
     set({ userId, hydrationStatus: 'loading', lastMessage: null });
     try {
-      let active = await fetchActivePact(userId);
-      const resolved = await resolveExpiredActive(userId, active);
-      if (resolved && resolved.status === 'broken') {
-        active = null;
-      } else {
-        active = resolved;
-      }
-
+      const fetched = await fetchActivePacts(userId);
+      const activePacts = await resolveExpiredActives(userId, fetched);
       const history = await fetchPactHistory(userId);
-      set({ activePact: active, history, hydrationStatus: 'done' });
+      set({ activePacts, history, hydrationStatus: 'done' });
     } catch (err) {
       log.warn('Pact hydrate failed', {
         userId,
@@ -118,12 +116,9 @@ export const usePactStore = create<PactState>((set, get) => ({
   },
 
   sealPact: async ({ hobbyId, promiseText, endDate }) => {
-    const { userId, activePact, isMutating } = get();
+    const { userId, activePacts, isMutating } = get();
     if (!userId) return { ok: false, message: 'Sign in to seal a pact.' };
     if (isMutating) return { ok: false, message: 'Please wait…' };
-    if (activePact?.status === 'active') {
-      return { ok: false, message: 'You already have an active pact.' };
-    }
 
     const startDate = toDateKey();
     const validation = validatePactDraft({
@@ -145,8 +140,9 @@ export const usePactStore = create<PactState>((set, get) => ({
         startDate,
         endDate,
       });
-      set({ activePact: pact, lastMessage: null });
-      log.info('Pact sealed', { userId, pactId: pact.id, endDate });
+      const next = [...activePacts, pact].sort((a, b) => a.end_date.localeCompare(b.end_date));
+      set({ activePacts: next, lastMessage: null });
+      log.info('Pact sealed', { userId, pactId: pact.id, endDate, activeCount: next.length });
       return { ok: true };
     } catch (err) {
       log.error('Seal pact failed', { error: err instanceof Error ? err.message : 'Unknown' });
@@ -156,13 +152,14 @@ export const usePactStore = create<PactState>((set, get) => ({
     }
   },
 
-  fulfillActivePact: async () => {
-    const { userId, activePact, isMutating, history } = get();
-    if (!userId || !activePact || activePact.status !== 'active') {
+  fulfillPact: async (pactId) => {
+    const { userId, activePacts, isMutating, history } = get();
+    const pact = activePacts.find((p) => p.id === pactId);
+    if (!userId || !pact || pact.status !== 'active') {
       return { ok: false, message: 'No active pact to fulfill.' };
     }
     if (isMutating) return { ok: false, message: 'Please wait…' };
-    if (!canFulfillPact(activePact.start_date, activePact.end_date)) {
+    if (!canFulfillPact(pact.start_date, pact.end_date)) {
       return {
         ok: false,
         message: 'Complete the pact on or before the deadline — after that it breaks.',
@@ -171,7 +168,7 @@ export const usePactStore = create<PactState>((set, get) => ({
 
     set({ isMutating: true, lastMessage: null });
     try {
-      const fulfilled = await markPactFulfilled(activePact.id, userId);
+      const fulfilled = await markPactFulfilled(pact.id, userId);
       const nextCount = useGamificationStore.getState().pactsFulfilled + 1;
       const row = await updateUserGamification(userId, { pacts_fulfilled: nextCount });
       useGamificationStore.setState({
@@ -182,7 +179,7 @@ export const usePactStore = create<PactState>((set, get) => ({
       });
 
       set({
-        activePact: null,
+        activePacts: activePacts.filter((p) => p.id !== pactId),
         history: [fulfilled, ...history],
         lastMessage: 'Pact completed. Promise count increased.',
       });
@@ -196,19 +193,20 @@ export const usePactStore = create<PactState>((set, get) => ({
     }
   },
 
-  abandonActivePact: async () => {
-    const { userId, activePact, isMutating, history } = get();
-    if (!userId || !activePact || activePact.status !== 'active') {
+  abandonPact: async (pactId) => {
+    const { userId, activePacts, isMutating, history } = get();
+    const pact = activePacts.find((p) => p.id === pactId);
+    if (!userId || !pact || pact.status !== 'active') {
       return { ok: false, message: 'No active pact to abandon.' };
     }
     if (isMutating) return { ok: false, message: 'Please wait…' };
 
     set({ isMutating: true, lastMessage: null });
     try {
-      const broken = await markPactBroken(activePact.id, userId);
+      const broken = await markPactBroken(pact.id, userId);
       await applyBreakPenalty(userId);
       set({
-        activePact: null,
+        activePacts: activePacts.filter((p) => p.id !== pactId),
         history: [broken, ...history],
         lastMessage: 'Pact broken — rating took a hit.',
       });

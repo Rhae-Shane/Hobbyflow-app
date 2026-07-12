@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowMe: {
-    backgroundColor: '#F7F3EA',
+    backgroundColor: '#F7F8FA',
   },
   rank: {
     color: onboardingColors.text,

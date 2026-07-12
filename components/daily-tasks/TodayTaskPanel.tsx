@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import type { DailyTaskRow, TodayDailyTasksResponse } from '@/types/gamification.types';
+import { hapticLight, hapticSuccess } from '@/utils/haptics';
 
 type Props = {
   bundle: TodayDailyTasksResponse | null;
@@ -49,7 +50,14 @@ function TaskRow({
       </Text>
       {!done ? (
         <View style={styles.actions}>
-          <Pressable style={styles.primaryBtn} onPress={onComplete} disabled={isCompleting}>
+          <Pressable
+            style={styles.primaryBtn}
+            onPress={() => {
+              hapticSuccess();
+              onComplete();
+            }}
+            disabled={isCompleting}
+          >
             {isCompleting ? (
               <ActivityIndicator color={onboardingColors.primaryText} />
             ) : (
@@ -59,7 +67,10 @@ function TaskRow({
           {showRegenerate && onRegenerate ? (
             <Pressable
               style={[styles.secondaryBtn, (regeneratesRemaining ?? 0) <= 0 && styles.btnDisabled]}
-              onPress={onRegenerate}
+              onPress={() => {
+                hapticLight();
+                onRegenerate?.();
+              }}
               disabled={isGenerating || (regeneratesRemaining ?? 0) <= 0}
             >
               {isGenerating ? (
@@ -106,7 +117,14 @@ export function TodayTaskPanel({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {!primary ? (
-        <Pressable style={styles.seeToday} onPress={onSeeToday} disabled={isGenerating}>
+        <Pressable
+          style={styles.seeToday}
+          onPress={() => {
+            hapticLight();
+            onSeeToday();
+          }}
+          disabled={isGenerating}
+        >
           {isGenerating ? (
             <ActivityIndicator color={onboardingColors.primaryText} />
           ) : (
@@ -135,7 +153,14 @@ export function TodayTaskPanel({
       ))}
 
       {bundle?.can_generate_bonus ? (
-        <Pressable style={styles.bonusBtn} onPress={onGenerateBonus} disabled={isGenerating}>
+        <Pressable
+          style={styles.bonusBtn}
+          onPress={() => {
+            hapticLight();
+            onGenerateBonus();
+          }}
+          disabled={isGenerating}
+        >
           {isGenerating ? (
             <ActivityIndicator color={onboardingColors.text} />
           ) : (

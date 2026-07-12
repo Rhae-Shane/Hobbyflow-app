@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Animated, Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import { hapticLight } from '@/utils/haptics';
 
 type Props = {
   children: React.ReactNode;
@@ -31,7 +32,10 @@ export function AskPressable({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        hapticLight();
+        onPress?.();
+      }}
       onPressIn={() => animateTo(0.96)}
       onPressOut={() => animateTo(1)}
     >

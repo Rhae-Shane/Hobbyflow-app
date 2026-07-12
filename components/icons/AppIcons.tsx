@@ -1,11 +1,15 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { theme } from '@/constants/theme';
+
 type IconProps = {
   size?: number;
   color?: string;
 };
 
-export function SparkleIcon({ size = 22, color = '#2C2416' }: IconProps) {
+const DEFAULT_ICON = theme.colors.text;
+
+export function SparkleIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -16,6 +20,33 @@ export function SparkleIcon({ size = 22, color = '#2C2416' }: IconProps) {
         d="M18.5 14.5L19.2 17.1L21.8 17.8L19.2 18.5L18.5 21.1L17.8 18.5L15.2 17.8L17.8 17.1L18.5 14.5Z"
         fill={color}
         opacity={0.7}
+      />
+    </Svg>
+  );
+}
+
+/** Atom / orbital mark — matches Ask SuperKalam–style coach CTA. */
+export function AtomIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="2" fill={color} />
+      {/* Three orbital ellipses at 0°, 60°, −60° */}
+      <Path
+        d="M12 7.2C16.2 7.2 19.6 9.35 19.6 12C19.6 14.65 16.2 16.8 12 16.8C7.8 16.8 4.4 14.65 4.4 12C4.4 9.35 7.8 7.2 12 7.2Z"
+        stroke={color}
+        strokeWidth={1.55}
+      />
+      <Path
+        d="M12 7.2C16.2 7.2 19.6 9.35 19.6 12C19.6 14.65 16.2 16.8 12 16.8C7.8 16.8 4.4 14.65 4.4 12C4.4 9.35 7.8 7.2 12 7.2Z"
+        stroke={color}
+        strokeWidth={1.55}
+        transform="rotate(60 12 12)"
+      />
+      <Path
+        d="M12 7.2C16.2 7.2 19.6 9.35 19.6 12C19.6 14.65 16.2 16.8 12 16.8C7.8 16.8 4.4 14.65 4.4 12C4.4 9.35 7.8 7.2 12 7.2Z"
+        stroke={color}
+        strokeWidth={1.55}
+        transform="rotate(-60 12 12)"
       />
     </Svg>
   );
@@ -41,7 +72,7 @@ export function SendIcon({ size = 20, color = '#FFFFFF' }: IconProps) {
   );
 }
 
-export function PlusIcon({ size = 16, color = '#2C2416' }: IconProps) {
+export function PlusIcon({ size = 16, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M12 5V19" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
@@ -50,7 +81,7 @@ export function PlusIcon({ size = 16, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function HistoryIcon({ size = 16, color = '#2C2416' }: IconProps) {
+export function HistoryIcon({ size = 16, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="12" r="8.25" stroke={color} strokeWidth={2} />
@@ -65,7 +96,7 @@ export function HistoryIcon({ size = 16, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function CloseIcon({ size = 14, color = '#2C2416' }: IconProps) {
+export function CloseIcon({ size = 14, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M6 6L18 18" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
@@ -74,7 +105,7 @@ export function CloseIcon({ size = 14, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function LessonsIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function LessonsIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -92,7 +123,7 @@ export function LessonsIcon({ size = 22, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function FeedbackIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function FeedbackIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -107,7 +138,7 @@ export function FeedbackIcon({ size = 22, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function ChatBubbleIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function ChatBubbleIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -135,7 +166,7 @@ export function TrashIcon({ size = 16, color = '#A14A3A' }: IconProps) {
   );
 }
 
-export function HomeTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function HomeTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -149,7 +180,7 @@ export function HomeTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function FeedTabIcon({ size = 22, color = '#2C2416', filled = false }: IconProps & { filled?: boolean }) {
+export function FeedTabIcon({ size = 22, color = DEFAULT_ICON, filled = false }: IconProps & { filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="12" r="7.25" stroke={color} strokeWidth={1.9} fill={filled ? color : 'none'} fillOpacity={filled ? 0.18 : 0} />
@@ -158,11 +189,11 @@ export function FeedTabIcon({ size = 22, color = '#2C2416', filled = false }: Ic
   );
 }
 
-export function GenerateTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function GenerateTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return <SparkleIcon size={size} color={color} />;
 }
 
-export function CoursesTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function CoursesTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x="4.5" y="5" width="15" height="14" rx="2.5" stroke={color} strokeWidth={1.9} />
@@ -173,7 +204,21 @@ export function CoursesTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
   );
 }
 
-export function ProfileTabIcon({ size = 22, color = '#2C2416' }: IconProps) {
+export function ChevronRightIcon({ size = 18, color = DEFAULT_ICON }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9.5 5.5L16 12L9.5 18.5"
+        stroke={color}
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function ProfileTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="9" r="3.25" stroke={color} strokeWidth={1.9} />

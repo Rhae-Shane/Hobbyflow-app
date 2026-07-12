@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
+import { hapticSelection } from '@/utils/haptics';
 
 export type ChipLayout = 'wrap' | 'list' | 'grid';
 
@@ -23,15 +24,18 @@ export function MultiSelectChips({
 }: Props) {
   const toggle = (option: string) => {
     if (resolveSelection) {
+      hapticSelection();
       onChange(resolveSelection(selected, option));
       return;
     }
 
     if (selected.includes(option)) {
       if (selected.length <= minSelection) return;
+      hapticSelection();
       onChange(selected.filter((item) => item !== option));
       return;
     }
+    hapticSelection();
     onChange([...selected, option]);
   };
 

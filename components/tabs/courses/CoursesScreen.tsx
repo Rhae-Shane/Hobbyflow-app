@@ -1,33 +1,57 @@
-import { useQuery } from '@tanstack/react-query';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
+import {
+  AddHobbyGhostBlock,
+  HobbyRoadmapBlock,
+  type HobbyBlockProgress,
+} from '@/components/home/HobbyRoadmapBlock';
+import { PlantDoodle } from '@/components/home/HobbyBlockIllustration';
 import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchUserRoadmaps } from '@/services/roadmaps';
-import type { RoadmapRow } from '@/types/roadmap.types';
+import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
-import { useGamificationStore } from '@/store/useGamificationStore';
+import type { RoadmapRow } from '@/types/roadmap.types';
 
-function statusLabel(status: RoadmapRow['status']): string {
-  if (status === 'active') return 'In progress';
-  if (status === 'preview') return 'Preview';
-  return 'Archived';
+const GAP = 12;
+
+type GridItem =
+  | { kind: 'roadmap'; row: RoadmapRow; index: number }
+  | { kind: 'add' };
+
+function chunkPairs<T>(items: T[]): T[][] {
+  const pairs: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) {
+    pairs.push(items.slice(i, i + 2));
+  }
+  return pairs;
 }
 
 export function CoursesScreen() {
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();
   const setSelectedRoadmapId = useRoadmapUiStore((s) => s.setSelectedRoadmapId);
-  const currentStreak = useGamificationStore((s) => s.currentStreak);
-  const rating = useGamificationStore((s) => s.rating);
+
+  const cardWidth = Math.floor((windowWidth - spacing.md * 2 - GAP) / 2);
 
   const openRoadmap = (rowId: string) => {
     setSelectedRoadmapId(rowId);
-    router.push('/(app)/(tabs)' as never);
+    router.push(`/(app)/roadmap/${rowId}` as never);
   };
+
+  const goGenerate = () => router.push('/(app)/(tabs)/generate' as never);
 
   const query = useQuery({
     queryKey: ['user-roadmaps', user?.id],
@@ -35,203 +59,170 @@ export function CoursesScreen() {
     enabled: Boolean(user?.id),
   });
 
+  const rows = query.data ?? [];
+  const progressIds = useMemo(() => rows.map((r) => r.id), [rows]);
+
+  const progressQueries = useQueries({
+    queries: progressIds.map((id) => ({
+      queryKey: ['roadmap-detail', id],
+      queryFn: () => fetchRoadmapDetail(id),
+      enabled: Boolean(id),
+      staleTime: 60_000,
+    })),
+  });
+
+  const progressById = useMemo(() => {
+    const map: Record<string, HobbyBlockProgress> = {};
+    progressQueries.forEach((q, i) => {
+      const id = progressIds[i];
+      if (!id || !q.data) return;
+      const lessons = q.data.lessons ?? [];
+      const total = lessons.length;
+      const completed = lessons.filter((l) => l.status === 'completed').length;
+      map[id] = { completed, total: Math.max(total, 1) };
+    });
+    return map;
+  }, [progressQueries, progressIds]);
+
+  const gridItems = useMemo<GridItem[]>(() => {
+    const items: GridItem[] = rows.map((row, index) => ({
+      kind: 'roadmap',
+      row,
+      index,
+    }));
+    items.push({ kind: 'add' });
+    return items;
+  }, [rows]);
+
+  const pairs = useMemo(() => chunkPairs(gridItems), [gridItems]);
+
   if (query.isLoading) {
     return <BootSpinner />;
   }
 
-  const rows = query.data ?? [];
-
   return (
-    <View style={[styles.container, { paddingTop: spacing.md }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Roadmaps</Text>
-        <View style={styles.stats}>
-          <View style={styles.statPill}>
-            <Text style={styles.statText}>🔥 {currentStreak}</Text>
-          </View>
-          <View style={styles.statPill}>
-            <Text style={styles.statText}>★ {rating}</Text>
-          </View>
-        </View>
-      </View>
-      <Text style={styles.subtitle}>View and manage your learning roadmaps</Text>
-
+    <View style={styles.root}>
       <ScrollView
         contentContainerStyle={[
-          styles.list,
+          styles.content,
           { paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {rows.map((row) => (
-          <View key={row.id} style={styles.card} testID={`course-card-${row.id}`}>
-            <View style={styles.cardTop}>
-              <Text style={styles.cardTitle}>{row.title}</Text>
-              <Text style={styles.menu}>⋮</Text>
-            </View>
-            <View style={styles.metaRow}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{statusLabel(row.status)}</Text>
-              </View>
-              <Text style={styles.metaText}>Open to continue</Text>
-            </View>
-            <View style={styles.actions}>
-              <Pressable style={styles.secondaryBtn} onPress={() => openRoadmap(row.id)}>
-                <Text style={styles.secondaryBtnText}>VIEW PATH</Text>
-              </Pressable>
-              <Pressable style={styles.primaryBtn} onPress={() => openRoadmap(row.id)}>
-                <Text style={styles.primaryBtnText}>OPEN</Text>
-              </Pressable>
-            </View>
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Hobby roadmaps</Text>
+            <Text style={styles.subtitle}>All your learning paths</Text>
           </View>
-        ))}
+        </View>
 
         {rows.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No roadmaps yet</Text>
-            <Text style={styles.emptyBody}>Create one from the Generation tab.</Text>
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => router.push('/(app)/(tabs)/generate' as never)}
-            >
-              <Text style={styles.primaryBtnText}>GENERATE</Text>
+            <PlantDoodle width={140} height={140} />
+            <Text style={styles.emptyTitle}>No roadmap yet</Text>
+            <Text style={styles.emptyBody}>
+              Generate a personalized learning path and it will show up here as a hobby block.
+            </Text>
+            <Pressable style={styles.emptyCta} onPress={goGenerate}>
+              <Text style={styles.emptyCtaText}>Start generating</Text>
             </Pressable>
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.grid}>
+            {pairs.map((pair, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={styles.row}>
+                {pair.map((item) =>
+                  item.kind === 'add' ? (
+                    <AddHobbyGhostBlock
+                      key="add"
+                      onPress={goGenerate}
+                      width={cardWidth}
+                    />
+                  ) : (
+                    <HobbyRoadmapBlock
+                      key={item.row.id}
+                      title={item.row.title}
+                      index={item.index}
+                      progress={progressById[item.row.id]}
+                      ctaLabel={item.row.status === 'preview' ? 'START' : 'OPEN'}
+                      onPress={() => openRoadmap(item.row.id)}
+                      width={cardWidth}
+                    />
+                  ),
+                )}
+                {pair.length === 1 ? <View style={{ width: cardWidth }} /> : null}
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: onboardingColors.background,
+  root: {
+    backgroundColor: dashboardColors.background,
     flex: 1,
+  },
+  content: {
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
-    color: onboardingColors.text,
-    fontSize: 32,
+    color: dashboardColors.text,
+    fontSize: 24,
     fontWeight: '800',
-  },
-  stats: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  statPill: {
-    backgroundColor: '#EFEAE0',
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statText: {
-    color: onboardingColors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
-    marginBottom: spacing.md,
     marginTop: 4,
   },
-  list: {
-    gap: spacing.md,
+  grid: {
+    gap: GAP,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  cardTop: {
-    alignItems: 'flex-start',
+  row: {
     flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  cardTitle: {
-    color: onboardingColors.text,
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  menu: {
-    color: onboardingColors.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  badge: {
-    backgroundColor: '#EFEAE0',
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    color: onboardingColors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metaText: {
-    color: onboardingColors.textMuted,
-    fontSize: 13,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  secondaryBtn: {
-    alignItems: 'center',
-    borderColor: onboardingColors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    flex: 1,
-    paddingVertical: 12,
-  },
-  secondaryBtnText: {
-    color: onboardingColors.textMuted,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  primaryBtn: {
-    alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderBottomColor: onboardingColors.primaryBorder,
-    borderBottomWidth: 3,
-    borderRadius: 14,
-    flex: 1,
-    paddingVertical: 12,
-  },
-  primaryBtnText: {
-    color: onboardingColors.primaryText,
-    fontSize: 13,
-    fontWeight: '800',
+    gap: GAP,
   },
   empty: {
     alignItems: 'center',
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
   emptyTitle: {
-    color: onboardingColors.text,
-    fontSize: 18,
-    fontWeight: '700',
+    color: dashboardColors.text,
+    fontSize: 20,
+    fontWeight: '800',
   },
   emptyBody: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
-    marginBottom: spacing.sm,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  emptyCta: {
+    backgroundColor: dashboardColors.cta,
+    borderRadius: dashboardRadii.pill,
+    marginTop: spacing.sm,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  emptyCtaText: {
+    color: dashboardColors.ctaText,
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

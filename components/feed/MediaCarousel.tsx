@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     width: WIDTH,
   },
   media: {
-    backgroundColor: '#EFEAE0',
+    backgroundColor: '#E8F3FF',
     height: 280,
     width: WIDTH,
   },

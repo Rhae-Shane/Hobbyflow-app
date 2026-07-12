@@ -22,24 +22,28 @@ async function attachHobbyNames(rows: UserPactRow[]): Promise<UserPactRow[]> {
   return rows.map((r) => ({ ...r, hobby_name: nameById.get(r.hobby_id) ?? null }));
 }
 
-export async function fetchActivePact(userId: string): Promise<UserPactRow | null> {
+export async function fetchActivePacts(userId: string): Promise<UserPactRow[]> {
   const { data, error } = await supabase
     .from('user_pacts')
     .select(PACT_SELECT)
     .eq('user_id', userId)
     .eq('status', 'active')
-    .maybeSingle();
+    .order('end_date', { ascending: true });
 
   if (error) {
-    log.error('Failed to fetch active pact', { userId, error: error.message });
+    log.error('Failed to fetch active pacts', { userId, error: error.message });
     throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
       cause: error,
     });
   }
 
-  if (!data) return null;
-  const [withName] = await attachHobbyNames([data as UserPactRow]);
-  return withName;
+  return attachHobbyNames((data ?? []) as UserPactRow[]);
+}
+
+/** @deprecated Prefer fetchActivePacts — kept for any remaining single-pact call sites. */
+export async function fetchActivePact(userId: string): Promise<UserPactRow | null> {
+  const rows = await fetchActivePacts(userId);
+  return rows[0] ?? null;
 }
 
 export async function fetchPactHistory(userId: string, limit = 20): Promise<UserPactRow[]> {

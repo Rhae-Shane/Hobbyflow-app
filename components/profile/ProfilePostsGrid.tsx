@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     alignItems: 'center',
-    backgroundColor: '#EFEAE0',
+    backgroundColor: '#E8F3FF',
     borderColor: onboardingColors.border,
     borderRadius: 8,
     borderWidth: 1,

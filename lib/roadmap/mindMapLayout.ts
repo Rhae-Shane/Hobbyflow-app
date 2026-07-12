@@ -117,17 +117,17 @@ export function layoutMindMap(
 }
 
 export const mindMapColors = {
-  canvas: '#F7F3EA',
-  rootBg: '#E8F4FC',
-  rootBorder: '#5BA3D9',
-  midBg: '#EDE4F5',
-  midBorder: '#9B7BB8',
-  leafBg: '#E4F0E6',
-  leafBorder: '#7BA87B',
-  edge: '#C8C0B4',
-  selectedRing: '#2C2416',
+  canvas: '#F6F6F6',
+  rootBg: '#E8D5F5',
+  rootBorder: '#D4B8E8',
+  midBg: '#FFE4D1',
+  midBorder: '#FFB86B',
+  leafBg: '#D8EEF8',
+  leafBorder: '#B9DFF0',
+  edge: '#E0E0E6',
+  selectedRing: '#141414',
   sidebar: '#FFFFFF',
-  statusPill: '#EFEAE0',
+  statusPill: '#F3EAF8',
 } as const;
 
 export function colorsForIndex(colorIndex: number): { bg: string; border: string } {

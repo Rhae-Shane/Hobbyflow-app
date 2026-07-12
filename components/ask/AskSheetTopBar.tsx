@@ -1,35 +1,49 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CloseIcon, HistoryIcon, PlusIcon } from '@/components/icons/AppIcons';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import Svg, { Path } from 'react-native-svg';
+import { askCompanionColors } from '@/constants/askCompanionTokens';
+import { spacing } from '@/constants/tokens';
 
 type Props = {
-  title?: string | null;
-  onNewChat: () => void;
-  onHistory: () => void;
-  onClose: () => void;
+  title?: string;
+  onBack: () => void;
+  onMenu: () => void;
 };
 
-export function AskSheetTopBar({ title, onNewChat, onHistory, onClose }: Props) {
+function BackIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M15 6L9 12L15 18"
+        stroke={askCompanionColors.text}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 7H19" stroke={askCompanionColors.text} strokeWidth={2.2} strokeLinecap="round" />
+      <Path d="M5 12H19" stroke={askCompanionColors.text} strokeWidth={2.2} strokeLinecap="round" />
+      <Path d="M5 17H19" stroke={askCompanionColors.text} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function AskSheetTopBar({ title = 'Hobby Companion', onBack, onMenu }: Props) {
   return (
     <View style={styles.row}>
-      <Pressable onPress={onNewChat} style={styles.pill} accessibilityLabel="New chat">
-        <PlusIcon size={14} color={onboardingColors.text} />
-        <Text style={styles.pillText}>New</Text>
+      <Pressable onPress={onBack} style={styles.iconBtn} accessibilityLabel="Close">
+        <BackIcon />
       </Pressable>
-      <Pressable onPress={onHistory} style={styles.pill} accessibilityLabel="Chat history">
-        <HistoryIcon size={14} color={onboardingColors.text} />
-        <Text style={styles.pillText}>History</Text>
-      </Pressable>
-      {title ? (
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-      ) : (
-        <View style={{ flex: 1 }} />
-      )}
-      <Pressable onPress={onClose} style={styles.closePill} accessibilityLabel="Close">
-        <CloseIcon size={12} color={onboardingColors.text} />
+      <Text style={styles.title} numberOfLines={1}>
+        {title}
+      </Text>
+      <Pressable onPress={onMenu} style={styles.iconBtn} accessibilityLabel="Chat history">
+        <MenuIcon />
       </Pressable>
     </View>
   );
@@ -39,39 +53,21 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
     zIndex: 1,
   },
-  pill: {
+  iconBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  pillText: {
-    color: onboardingColors.text,
-    fontSize: 13,
-    fontWeight: '700',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   title: {
-    color: onboardingColors.textMuted,
+    color: askCompanionColors.text,
     flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  closePill: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

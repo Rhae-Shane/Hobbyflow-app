@@ -71,11 +71,13 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Roadmap', tabBarLabel: 'Roadmap' }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarLabel: 'Home' }} />
       <Tabs.Screen name="feed" options={{ title: 'Feed', tabBarLabel: 'Feed' }} />
       <Tabs.Screen name="generate" options={{ title: 'Generation', tabBarLabel: 'Generation' }} />
-      <Tabs.Screen name="courses" options={{ title: 'Courses', tabBarLabel: 'Courses' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
+      {/* Courses / all roadmaps — opened via Home “See all”, not the tab bar */}
+      <Tabs.Screen name="courses" options={{ href: null }} />
+      {/* Profile opens from home header avatar, not the tab bar */}
+      <Tabs.Screen name="profile" options={{ href: null }} />
       {/* Keep file for deep links / old Progress tab redirects if needed */}
       <Tabs.Screen name="progress" options={{ href: null }} />
     </Tabs>

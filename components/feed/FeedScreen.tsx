@@ -10,11 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { CommentsSheet } from '@/components/feed/CommentsSheet';
 import { PostCard } from '@/components/feed/PostCard';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
 import { listFeed, softDeletePost } from '@/services/posts';
 import { fetchOwnHobbyTags } from '@/services/profileSearch';
@@ -132,9 +132,12 @@ export function FeedScreen() {
   const emptyCta = myTags.length === 0 ? 'Create a roadmap' : 'Create a post';
 
   return (
-    <View style={styles.root}>
+    <ScreenShell padded={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Feed</Text>
+        <View>
+          <Text style={styles.eyebrow}>HobbyFlow</Text>
+          <Text style={styles.title}>Feed</Text>
+        </View>
         <Pressable style={styles.composeBtn} onPress={onCompose} accessibilityLabel="New post">
           <Text style={styles.composeGlyph}>＋</Text>
         </Pressable>
@@ -176,14 +179,14 @@ export function FeedScreen() {
       ) : null}
 
       {loading ? (
-        <ActivityIndicator color={onboardingColors.primaryText} style={{ marginTop: 48 }} />
+        <ActivityIndicator color={dashboardColors.text} style={{ marginTop: 48 }} />
       ) : (
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
             paddingHorizontal: spacing.md,
-            paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24,
+            paddingBottom: TAB_SCROLL_BOTTOM_INSET,
             gap: spacing.md,
             flexGrow: 1,
           }}
@@ -197,7 +200,7 @@ export function FeedScreen() {
                   await load('replace');
                 })();
               }}
-              tintColor={onboardingColors.primaryText}
+              tintColor={dashboardColors.text}
             />
           }
           ListEmptyComponent={
@@ -219,7 +222,7 @@ export function FeedScreen() {
           }
           ListFooterComponent={
             loadingMore ? (
-              <ActivityIndicator color={onboardingColors.primaryText} style={{ marginVertical: 16 }} />
+              <ActivityIndicator color={dashboardColors.text} style={{ marginVertical: 16 }} />
             ) : null
           }
           onEndReached={() => {
@@ -275,40 +278,41 @@ export function FeedScreen() {
           });
         }}
       />
-    </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    backgroundColor: onboardingColors.background,
-    flex: 1,
-  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  eyebrow: {
+    color: dashboardColors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   title: {
-    color: onboardingColors.text,
-    fontSize: 32,
+    color: dashboardColors.text,
+    fontSize: 28,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   composeBtn: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderColor: onboardingColors.primaryBorder,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 40,
+    backgroundColor: dashboardColors.cta,
+    borderRadius: 14,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   composeGlyph: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.ctaText,
     fontSize: 22,
     fontWeight: '800',
   },
@@ -318,25 +322,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   filterChip: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.pill,
     borderWidth: 1,
     maxWidth: 160,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
   filterChipActive: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
-    borderColor: onboardingColors.primaryBorder,
+    backgroundColor: '#F3EAF8',
+    borderColor: '#D4B8E8',
   },
   filterText: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   filterTextActive: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
   },
   empty: {
     alignItems: 'center',
@@ -345,20 +349,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   emptyTitle: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 16,
     textAlign: 'center',
   },
   emptyBtn: {
-    backgroundColor: onboardingColors.primary,
-    borderColor: onboardingColors.primaryBorder,
-    borderRadius: 999,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.cta,
+    borderRadius: dashboardRadii.pill,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   emptyBtnText: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.ctaText,
     fontWeight: '800',
   },
   error: {

@@ -17,6 +17,8 @@ export type LearningPathNode = {
   nodeKind: PathNodeKind;
   id: string;
   nodeId: string | null;
+  /** Section this node belongs to (for Explore Module filters). */
+  sectionId: string;
   label: string;
   subtitle?: string;
   visualState: PathNodeVisualState;
@@ -135,6 +137,7 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
         nodeKind: 'lesson',
         id: entry.lessonRow.id,
         nodeId: entry.node.id,
+        sectionId: section.id,
         label: entry.lessonRow.session_config?.name ?? entry.node.name,
         visualState: visualStateForLesson(entry.lessonRow.id, entry.lessonRow.status, currentId),
         pathOrder: entry.lessonRow.path_order,
@@ -151,6 +154,7 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
         nodeKind: 'applied',
         id: entry.lessonRow.id,
         nodeId: entry.node.id,
+        sectionId: section.id,
         label: entry.lessonRow.session_config?.name ?? entry.node.name,
         subtitle: 'Advanced Lesson',
         visualState: visualStateForLesson(entry.lessonRow.id, entry.lessonRow.status, currentId),
@@ -167,6 +171,7 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
       nodeKind: 'section_review',
       id: `section-review-${section.id}`,
       nodeId: null,
+      sectionId: section.id,
       label: 'Section Review',
       subtitle: '0/2 sessions',
       visualState: 'locked',

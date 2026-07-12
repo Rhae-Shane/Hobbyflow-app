@@ -13,6 +13,7 @@ import { useSwitchHobby } from '@/hooks/useSwitchHobby';
 import { colors, radii, spacing } from '@/constants/tokens';
 import { usePlanStore } from '@/store/usePlanStore';
 import type { HobbyRow } from '@/types/user.types';
+import { hapticLight, hapticSelection } from '@/utils/haptics';
 
 const LEVEL_LABELS: Record<HobbyRow['level'], string> = {
   beginner: 'Beginner',
@@ -37,6 +38,7 @@ export function HobbySwitcher({ compact = false }: Props) {
 
   const handleSelect = async (hobbyId: string) => {
     try {
+      hapticSelection();
       await switchHobby(hobbyId);
       setOpen(false);
     } catch {
@@ -45,6 +47,7 @@ export function HobbySwitcher({ compact = false }: Props) {
   };
 
   const handleAddHobby = () => {
+    hapticLight();
     setOpen(false);
     router.push('/(app)/(tabs)/generate' as never);
   };
@@ -57,7 +60,10 @@ export function HobbySwitcher({ compact = false }: Props) {
     <>
       <Pressable
         style={[styles.trigger, compact && styles.triggerCompact]}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          hapticLight();
+          setOpen(true);
+        }}
         disabled={isSwitching}
       >
         <View style={styles.triggerTextBlock}>

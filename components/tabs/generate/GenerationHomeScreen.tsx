@@ -8,13 +8,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
+import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
 import {
   GENERATION_SUGGESTIONS,
   type GenerationSuggestion,
 } from '@/components/tabs/generate/generationSuggestions';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii, hobbyBlockPalette } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 
 type Props = {
   onStart: (prompt: string) => void;
@@ -22,14 +22,21 @@ type Props = {
 
 function SuggestionCard({
   item,
+  index,
   onPress,
 }: {
   item: GenerationSuggestion;
+  index: number;
   onPress: () => void;
 }) {
+  const wash = hobbyBlockPalette[index % hobbyBlockPalette.length].background;
   return (
-    <Pressable style={styles.card} onPress={onPress} accessibilityLabel={item.title}>
-      <View style={[styles.cardArt, { backgroundColor: item.accent }]}>
+    <Pressable
+      style={[styles.card, { backgroundColor: wash }]}
+      onPress={onPress}
+      accessibilityLabel={item.title}
+    >
+      <View style={styles.cardArt}>
         <Image
           source={{ uri: item.imageUrl }}
           style={styles.cardImage}
@@ -60,20 +67,13 @@ export function GenerationHomeScreen({ onStart }: Props) {
   };
 
   return (
-    <View
-      style={[
-        styles.screen,
-        {
-          paddingTop: spacing.md,
-          paddingBottom: FLOATING_TAB_BAR_HEIGHT + 8,
-        },
-      ]}
-    >
+    <ScreenShell style={{ paddingBottom: TAB_SCROLL_BOTTOM_INSET - 16 }}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.eyebrow}>HobbyFlow</Text>
         <Text style={styles.title}>What do you want to learn?</Text>
         <Text style={styles.subtitle}>
           Tell me what you&apos;re curious about, and I&apos;ll create a personalized roadmap for
@@ -86,10 +86,11 @@ export function GenerationHomeScreen({ onStart }: Props) {
           contentContainerStyle={styles.cardsRow}
           style={styles.cardsScroll}
         >
-          {GENERATION_SUGGESTIONS.map((item) => (
+          {GENERATION_SUGGESTIONS.map((item, index) => (
             <SuggestionCard
               key={item.id}
               item={item}
+              index={index}
               onPress={() => onStart(item.prompt)}
             />
           ))}
@@ -101,7 +102,7 @@ export function GenerationHomeScreen({ onStart }: Props) {
           value={draft}
           onChangeText={setDraft}
           placeholder="I want to learn about..."
-          placeholderTextColor={onboardingColors.textMuted}
+          placeholderTextColor={dashboardColors.textMuted}
           style={styles.input}
           multiline
           onSubmitEditing={submit}
@@ -118,39 +119,42 @@ export function GenerationHomeScreen({ onStart }: Props) {
           </Pressable>
           <View style={{ flex: 1 }} />
           <Pressable
-            style={[styles.iconBtn, draft.trim() ? styles.iconBtnActive : null]}
+            style={[styles.sendBtn, !draft.trim() && styles.sendBtnDisabled]}
             accessibilityLabel="Start"
             onPress={submit}
             testID="generation-home-send"
           >
-            <Text style={styles.iconBtnText}>{draft.trim() ? '→' : '🎙'}</Text>
+            <Text style={styles.sendBtnText}>{draft.trim() ? '→' : '🎙'}</Text>
           </Pressable>
         </View>
       </View>
-    </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: onboardingColors.background,
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
   scroll: {
     flexGrow: 1,
     gap: spacing.md,
     paddingBottom: spacing.md,
   },
+  eyebrow: {
+    color: dashboardColors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
   title: {
-    color: onboardingColors.text,
-    fontSize: 30,
+    color: dashboardColors.text,
+    fontSize: 28,
     fontWeight: '800',
-    marginTop: spacing.sm,
+    letterSpacing: -0.4,
     textAlign: 'center',
   },
   subtitle: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
@@ -164,15 +168,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: dashboardRadii.block,
     overflow: 'hidden',
     width: 200,
   },
   cardArt: {
-    height: 132,
+    height: 120,
     overflow: 'hidden',
   },
   cardImage: {
@@ -185,38 +186,42 @@ const styles = StyleSheet.create({
   },
   categoryPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F3F0E8',
-    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: dashboardRadii.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   categoryText: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.text,
     fontSize: 11,
     fontWeight: '700',
   },
   cardTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 22,
     minHeight: 66,
   },
   cardAuthor: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
   },
   composer: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 22,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
     gap: spacing.sm,
     marginBottom: spacing.sm,
     padding: spacing.md,
+    shadowColor: '#141414',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
   input: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 16,
     maxHeight: 100,
     minHeight: 48,
@@ -229,25 +234,30 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
+    backgroundColor: dashboardColors.background,
     borderRadius: 12,
-    borderWidth: 1,
-    elevation: 1,
     height: 42,
     justifyContent: 'center',
-    shadowColor: '#2C2416',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
     width: 42,
   },
-  iconBtnActive: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
-    borderColor: onboardingColors.primaryBorder,
-  },
   iconBtnText: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sendBtn: {
+    alignItems: 'center',
+    backgroundColor: dashboardColors.cta,
+    borderRadius: 12,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  sendBtnDisabled: {
+    opacity: 0.45,
+  },
+  sendBtnText: {
+    color: dashboardColors.ctaText,
     fontSize: 16,
     fontWeight: '700',
   },

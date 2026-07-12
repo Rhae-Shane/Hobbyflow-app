@@ -8,6 +8,7 @@ import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { togglePostLike } from '@/services/posts';
 import type { FeedPost, PostHobbyTag } from '@/types/post.types';
+import { hapticLight, hapticWarning } from '@/utils/haptics';
 
 dayjs.extend(relativeTime);
 
@@ -46,6 +47,7 @@ export function PostCard({
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
+          hapticWarning();
           void (async () => {
             if (!onDelete) return;
             await onDelete(post.id);
@@ -60,6 +62,7 @@ export function PostCard({
     if (!currentUserId || likingRef.current) return;
     likingRef.current = true;
     setLiking(true);
+    hapticLight();
 
     const prevLiked = post.likedByMe;
     const prevCount = post.likeCount;

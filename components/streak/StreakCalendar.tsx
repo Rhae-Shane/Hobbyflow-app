@@ -16,6 +16,8 @@ type Props = {
   saverUsedDates: string[];
   /** Active pact window — days in range get a pact marker on the calendar. */
   pactRange?: PactCalendarRange | null;
+  /** Multiple active pact windows (union highlighted). */
+  pactRanges?: PactCalendarRange[] | null;
   /** When set, tapping a day in [min, max] calls onSelectDate. */
   selectableMin?: string | null;
   selectableMax?: string | null;
@@ -29,6 +31,7 @@ export function StreakCalendar({
   activityDates,
   saverUsedDates,
   pactRange = null,
+  pactRanges = null,
   selectableMin = null,
   selectableMax = null,
   onSelectDate,
@@ -39,6 +42,12 @@ export function StreakCalendar({
   const activitySet = useMemo(() => new Set(activityDates), [activityDates]);
   const saverSet = useMemo(() => new Set(saverUsedDates), [saverUsedDates]);
   const canSelect = Boolean(onSelectDate && selectableMin);
+
+  const ranges = useMemo(() => {
+    const list = [...(pactRanges ?? [])];
+    if (pactRange) list.push(pactRange);
+    return list;
+  }, [pactRange, pactRanges]);
 
   const cells = useMemo(() => {
     const start = cursor.startOf('month');
@@ -57,7 +66,15 @@ export function StreakCalendar({
   }, [cursor]);
 
   const todayDow = dayjs(today).day();
-  const showPactLegend = Boolean(pactRange);
+  const showPactLegend = ranges.length > 0;
+  const legendStart = ranges.reduce<string | null>(
+    (min, r) => (min == null || r.startDate < min ? r.startDate : min),
+    null,
+  );
+  const legendEnd = ranges.reduce<string | null>(
+    (max, r) => (max == null || r.endDate > max ? r.endDate : max),
+    null,
+  );
 
   return (
     <View style={styles.wrap}>
@@ -96,11 +113,11 @@ export function StreakCalendar({
           const isActive = activitySet.has(cell.dateKey);
           const isSaved = saverSet.has(cell.dateKey);
           const isFuture = cell.dateKey > today;
-          const isPactDay =
-            pactRange != null &&
-            isDateInPactRange(cell.dateKey, pactRange.startDate, pactRange.endDate);
-          const isPactStart = pactRange != null && cell.dateKey === pactRange.startDate;
-          const isPactEnd = pactRange != null && cell.dateKey === pactRange.endDate;
+          const isPactDay = ranges.some((r) =>
+            isDateInPactRange(cell.dateKey!, r.startDate, r.endDate),
+          );
+          const isPactStart = ranges.some((r) => cell.dateKey === r.startDate);
+          const isPactEnd = ranges.some((r) => cell.dateKey === r.endDate);
           const isSelectable =
             canSelect &&
             cell.dateKey >= selectableMin! &&
@@ -161,7 +178,9 @@ export function StreakCalendar({
         <View style={styles.legend} accessibilityLabel="Pact days on calendar">
           <View style={styles.legendSwatch} />
           <Text style={styles.legendText}>
-            The Pact · {pactRange!.startDate.slice(5)} → {pactRange!.endDate.slice(5)}
+            {ranges.length > 1
+              ? `The Pact · ${ranges.length} active · ${legendStart!.slice(5)} → ${legendEnd!.slice(5)}`
+              : `The Pact · ${legendStart!.slice(5)} → ${legendEnd!.slice(5)}`}
           </Text>
         </View>
       ) : null}

@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     alignItems: 'center',
-    backgroundColor: '#F3EEE6',
+    backgroundColor: onboardingColors.chipSelectedBackground,
     borderRadius: 12,
     height: 34,
     justifyContent: 'center',
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   newBtn: {
-    backgroundColor: '#2C2416',
+    backgroundColor: onboardingColors.text,
     borderRadius: radii.pill,
     marginTop: spacing.sm,
     paddingHorizontal: 16,

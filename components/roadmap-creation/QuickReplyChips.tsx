@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
+import { hapticSelection } from '@/utils/haptics';
 
 type Props = {
   options: { text: string }[];
@@ -26,7 +27,10 @@ export function QuickReplyChips({
             key={option.text}
             disabled={disabled}
             style={[styles.chip, isSelected && styles.chipSelected, disabled && styles.disabled]}
-            onPress={() => onSelect(option.text)}
+            onPress={() => {
+              hapticSelection();
+              onSelect(option.text);
+            }}
           >
             <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
               {option.text}

@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
 import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
 import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { listFeed } from '@/services/posts';
 import { fetchPublicProfile } from '@/services/profileSearch';
@@ -16,7 +16,6 @@ import type { PublicProfile } from '@/types/gamification.types';
 import type { FeedPost, SocialLink } from '@/types/post.types';
 
 export function PublicProfileScreen() {
-  const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
   const leagues = useGamificationStore((s) => s.leagues);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -70,35 +69,25 @@ export function PublicProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
-          <Text style={styles.backGlyph}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Pressable
-          onPress={() => {
-            void onShare();
-          }}
-          style={styles.shareBtn}
-          disabled={!profile}
-          accessibilityLabel="Share profile"
-        >
-          <Text style={styles.shareGlyph}>↗</Text>
-        </Pressable>
-      </View>
-
       {loading ? (
-        <ActivityIndicator color={onboardingColors.primaryText} style={{ marginTop: 48 }} />
+        <ActivityIndicator color={dashboardColors.text} style={{ marginTop: 48 }} />
       ) : error || !profile ? (
         <Text style={styles.error}>{error ?? 'Not found'}</Text>
       ) : (
         <ScrollView
-          contentContainerStyle={{
-            padding: spacing.md,
-            paddingBottom: 32,
-            gap: spacing.md,
-          }}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
         >
+          <Pressable
+            onPress={() => {
+              void onShare();
+            }}
+            style={styles.shareBtn}
+            accessibilityLabel="Share profile"
+          >
+            <Text style={styles.shareGlyph}>↗ Share</Text>
+          </Pressable>
+
           <View style={styles.card}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{profile.username.charAt(0).toUpperCase()}</Text>
@@ -143,84 +132,59 @@ export function PublicProfileScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    backgroundColor: onboardingColors.background,
+    backgroundColor: dashboardColors.background,
     flex: 1,
   },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backBtn: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  backGlyph: {
-    color: onboardingColors.text,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    color: onboardingColors.text,
-    fontSize: 18,
-    fontWeight: '800',
+  content: {
+    gap: spacing.md,
+    padding: spacing.md,
+    paddingBottom: 32,
   },
   shareBtn: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 12,
+    alignSelf: 'flex-end',
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.pill,
     borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   shareGlyph: {
-    color: onboardingColors.text,
-    fontSize: 18,
+    color: dashboardColors.text,
+    fontSize: 13,
     fontWeight: '700',
   },
   card: {
     alignItems: 'center',
-    backgroundColor: '#F7F3EA',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     gap: spacing.sm,
     padding: spacing.lg,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: 40,
+    backgroundColor: '#FFD6A8',
+    borderRadius: dashboardRadii.avatar,
     height: 80,
     justifyContent: 'center',
     width: 80,
   },
   avatarText: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   handle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 22,
     fontWeight: '800',
   },
   displayName: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
   },
   bio: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 14,
     marginTop: spacing.xs,
     textAlign: 'center',
@@ -230,36 +194,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     flex: 1,
     gap: 4,
     padding: spacing.md,
   },
   statValue: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 22,
     fontWeight: '800',
   },
   statLabel: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
     fontWeight: '600',
   },
   peak: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 13,
     textAlign: 'center',
   },
   sectionTitle: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   error: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     marginTop: 48,
     textAlign: 'center',
   },

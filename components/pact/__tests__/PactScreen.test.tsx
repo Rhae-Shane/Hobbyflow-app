@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { PactScreen } from '@/components/pact/PactScreen';
 
 jest.mock('expo-router', () => ({
@@ -10,6 +10,15 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
+jest.mock('@/utils/haptics', () => ({
+  hapticLight: jest.fn(),
+  hapticMedium: jest.fn(),
+  hapticSelection: jest.fn(),
+  hapticSuccess: jest.fn(),
+  hapticError: jest.fn(),
+  hapticWarning: jest.fn(),
 }));
 
 const mockHydrate = jest.fn();
@@ -42,37 +51,52 @@ jest.mock('@/store/usePactStore', () => ({
   usePactStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
       hydrate: mockHydrate,
-      activePact: null,
+      activePacts: [],
       history: [],
       isMutating: false,
       lastMessage: null,
       sealPact: mockSealPact,
-      fulfillActivePact: jest.fn(),
-      abandonActivePact: jest.fn(),
+      fulfillPact: jest.fn(),
+      abandonPact: jest.fn(),
     }),
 }));
 
 describe('PactScreen', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     mockHydrate.mockClear();
     mockSealPact.mockResolvedValue({ ok: true });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('renders create form when no active pact', () => {
     render(<PactScreen />);
     expect(screen.getByText('The Pact')).toBeTruthy();
     expect(screen.getByText('Pacts kept: 2')).toBeTruthy();
-    expect(screen.getByText('Seal the Pact')).toBeTruthy();
+    expect(screen.getByText('Press & hold to seal your pact')).toBeTruthy();
     expect(mockHydrate).toHaveBeenCalledWith('user-1');
   });
 
-  it('seals a pact from the form', () => {
+  it('seals a pact after holding the seal button', async () => {
     render(<PactScreen />);
     fireEvent.changeText(
       screen.getByPlaceholderText('Make my jump 6 feet'),
       'Make my jump 6 feet',
     );
-    fireEvent.press(screen.getByText('Seal the Pact'));
-    expect(mockSealPact).toHaveBeenCalled();
+
+    fireEvent(screen.getByTestId('seal-pact-hold'), 'pressIn', {
+      nativeEvent: { pageX: 200, pageY: 600 },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(950);
+    });
+
+    await waitFor(() => {
+      expect(mockSealPact).toHaveBeenCalled();
+    });
   });
 });

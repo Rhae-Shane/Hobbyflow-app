@@ -20,8 +20,36 @@ jest.mock('react-native-svg', () => {
     Path: Mock,
     Circle: Mock,
     Rect: Mock,
+    Ellipse: Mock,
   };
 });
+
+jest.mock('@tanstack/react-query', () => {
+  const actual = jest.requireActual('@tanstack/react-query');
+  return {
+    ...actual,
+    useQuery: () => ({ data: [], isLoading: false }),
+  };
+});
+
+jest.mock('@/services/roadmaps', () => ({
+  fetchUserRoadmaps: jest.fn(async () => []),
+  fetchRoadmapDetail: jest.fn(async () => ({ lessons: [], nodes: [], roadmap: null })),
+}));
+
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
+jest.mock('@/store/useGamificationStore', () => ({
+  useGamificationStore: (sel: (s: { activityDates: string[] }) => unknown) =>
+    sel({ activityDates: [] }),
+}));
+
+jest.mock('@/store/useRoadmapUiStore', () => ({
+  useRoadmapUiStore: (sel: (s: { selectedRoadmapId: string | null }) => unknown) =>
+    sel({ selectedRoadmapId: null }),
+}));
 
 jest.mock('@/hooks/useAskAnythingChat', () => ({
   useAskAnythingChat: () => ({
@@ -50,11 +78,13 @@ function renderSheet(ui: React.ReactElement) {
 }
 
 describe('AskAnythingSheet', () => {
-  it('renders greeting and editable composer', () => {
+  it('renders companion greeting and composer', () => {
     const onClose = jest.fn();
     renderSheet(<AskAnythingSheet visible onClose={onClose} />);
-    expect(screen.getByText('How can I help you today?')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Ask anything about your learning...')).toBeTruthy();
+    expect(screen.getByText('Hobby Companion')).toBeTruthy();
+    expect(screen.getByText('Hi! How can I support your learning today?')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Ask me anything..')).toBeTruthy();
+    expect(screen.getByText('Review my lessons')).toBeTruthy();
   });
 
   it('closes from the top bar', () => {

@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { spacing } from '@/constants/tokens';
 import { listFeed } from '@/services/posts';
 import { searchHobbyTags, searchProfiles } from '@/services/profileSearch';
 import { useGamificationStore } from '@/store/useGamificationStore';
@@ -114,14 +114,6 @@ export function ProfileSearchScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
-          <Text style={styles.backGlyph}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Search</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.input}
@@ -129,7 +121,7 @@ export function ProfileSearchScreen() {
           autoCorrect={false}
           autoFocus
           placeholder="Search people or hobbies"
-          placeholderTextColor={onboardingColors.textMuted}
+          placeholderTextColor={dashboardColors.textMuted}
           value={query}
           onChangeText={onChangeQuery}
         />
@@ -154,7 +146,7 @@ export function ProfileSearchScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={onboardingColors.primaryText} style={{ marginTop: 24 }} />
+        <ActivityIndicator color={dashboardColors.text} style={{ marginTop: 24 }} />
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -245,46 +237,22 @@ export function ProfileSearchScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    backgroundColor: onboardingColors.background,
+    backgroundColor: dashboardColors.background,
     flex: 1,
   },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerWrap: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
   },
-  backBtn: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  backGlyph: {
-    color: onboardingColors.text,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    color: onboardingColors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  headerSpacer: { width: 40 },
   searchWrap: {
     paddingHorizontal: spacing.md,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.block,
     borderWidth: 1,
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 16,
     fontWeight: '600',
     paddingHorizontal: spacing.md,
@@ -297,69 +265,67 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   tab: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.pill,
+    backgroundColor: dashboardColors.surface,
+    borderColor: 'rgba(20,20,20,0.06)',
+    borderRadius: dashboardRadii.pill,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   tabActive: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
-    borderColor: onboardingColors.primaryBorder,
+    backgroundColor: '#F3EAF8',
+    borderColor: '#D4B8E8',
   },
   tabText: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
     fontWeight: '700',
   },
   tabTextActive: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
   },
   row: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: dashboardColors.surface,
+    borderRadius: dashboardRadii.block,
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: 22,
+    backgroundColor: '#FFD6A8',
+    borderRadius: dashboardRadii.avatar,
     height: 44,
     justifyContent: 'center',
     width: 44,
   },
   hobbyAvatar: {
-    backgroundColor: '#E8F6FE',
+    backgroundColor: '#D8EEF8',
   },
   avatarText: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   body: { flex: 1, gap: 2 },
   name: {
-    color: onboardingColors.text,
+    color: dashboardColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   meta: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 12,
   },
   tags: {
-    color: onboardingColors.primaryText,
+    color: dashboardColors.text,
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
   },
   empty: {
-    color: onboardingColors.textMuted,
+    color: dashboardColors.textMuted,
     fontSize: 14,
     marginTop: spacing.lg,
     textAlign: 'center',

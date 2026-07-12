@@ -1,6 +1,9 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { BootSpinner } from '@/components/BootSpinner';
+import { AppChromeHeader } from '@/components/navigation/AppChromeHeader';
+import { theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsUserHydrated } from '@/hooks/useIsUserHydrated';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
@@ -9,8 +12,8 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
  * App stack (outside floating tabs):
  * - preferences, roadmap-creation, onboarding → first-run only
  * - roadmap-preview/[id] → after CREATE ROADMAP
- * - roadmap/[id] → redirects into Roadmap tab
- * - (tabs) → Roadmap | Feed | Generation | Courses | Profile
+ * - roadmap/[id] → learning-path detail (from Home / Courses)
+ * - (tabs) → Home | Feed | Generation (Profile via home avatar; Courses via See all)
  * - technique/[techniqueId] → detail
  */
 function isFirstRunOnlySegment(segments: string[]): boolean {
@@ -23,13 +26,21 @@ function isFirstRunOnlySegment(segments: string[]): boolean {
   );
 }
 
+function shouldShowChrome(pathname: string, segments: string[]): boolean {
+  if (isFirstRunOnlySegment(segments)) return false;
+  if (pathname.includes('/post/compose')) return false;
+  return true;
+}
+
 export default function AppLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const { user, isLoading } = useAuth();
   const isUserHydrated = useIsUserHydrated();
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
   const username = useUserStore((s) => s.username);
+  const showChrome = shouldShowChrome(pathname, segments as string[]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -51,7 +62,7 @@ export default function AppLayout() {
     if (
       username &&
       hasCompletedOnboarding(completedOnboardingAt) &&
-      isFirstRunOnlySegment(segments) &&
+      isFirstRunOnlySegment(segments as string[]) &&
       !onClaimUsername
     ) {
       router.replace('/(app)/(tabs)' as never);
@@ -63,21 +74,36 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="claim-username" />
-      <Stack.Screen name="preferences" />
-      <Stack.Screen name="roadmap-creation" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="roadmap-preview/[id]" />
-      <Stack.Screen name="roadmap/[id]" />
-      <Stack.Screen name="technique/[techniqueId]" />
-      <Stack.Screen name="streak" />
-      <Stack.Screen name="daily-tasks" />
-      <Stack.Screen name="pact" />
-      <Stack.Screen name="search" />
-      <Stack.Screen name="u/[username]" />
-      <Stack.Screen name="post/compose" options={{ presentation: 'modal' }} />
-    </Stack>
+    <View style={styles.root}>
+      {showChrome ? <AppChromeHeader /> : null}
+      <View style={styles.stack}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="claim-username" />
+          <Stack.Screen name="preferences" />
+          <Stack.Screen name="roadmap-creation" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="roadmap-preview/[id]" />
+          <Stack.Screen name="roadmap/[id]" />
+          <Stack.Screen name="technique/[techniqueId]" />
+          <Stack.Screen name="streak" />
+          <Stack.Screen name="daily-tasks" />
+          <Stack.Screen name="pact" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="u/[username]" />
+          <Stack.Screen name="post/compose" options={{ presentation: 'modal' }} />
+        </Stack>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    backgroundColor: theme.colors.background,
+    flex: 1,
+  },
+  stack: {
+    flex: 1,
+  },
+});

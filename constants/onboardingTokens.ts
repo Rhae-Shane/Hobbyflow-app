@@ -1,11 +1,14 @@
+import { theme } from '@/constants/theme';
+
+/** App-wide palette — Health Dashboard pastels. */
 export const onboardingColors = {
-  background: '#FDFBF0',
-  primary: '#7CCBFA',
-  primaryBorder: '#5BB8F0',
-  primaryText: '#1A3A4A',
-  text: '#2C2416',
-  textMuted: '#8B8178',
-  border: '#D4CEC4',
-  chipBackground: '#FFFFFF',
-  chipSelectedBackground: '#E8F6FE',
+  background: theme.colors.background,
+  primary: theme.colors.primary,
+  primaryBorder: theme.colors.primaryBorder,
+  primaryText: theme.colors.primaryText,
+  text: theme.colors.text,
+  textMuted: theme.colors.textMuted,
+  border: theme.colors.border,
+  chipBackground: theme.colors.chipBackground,
+  chipSelectedBackground: theme.colors.chipSelectedBackground,
 } as const;

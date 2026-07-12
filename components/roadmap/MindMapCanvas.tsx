@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   nodeLabel: {
-    color: '#2C2416',
+    color: '#141414',
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',

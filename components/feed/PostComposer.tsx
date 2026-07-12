@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     alignItems: 'center',
-    backgroundColor: '#2C2416',
+    backgroundColor: '#141414',
     borderRadius: 10,
     height: 20,
     justifyContent: 'center',
