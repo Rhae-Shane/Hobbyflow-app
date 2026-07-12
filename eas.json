@@ -8,9 +8,22 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://68.183.140.167.sslip.io",
+        "EXPO_PUBLIC_LOG_LEVEL": "warn",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ktpflodilhtcypuwjzdn.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_mdCCv4ZeV9KAO-l5SdVXag_J_M4Pzj6"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://68.183.140.167.sslip.io",
+        "EXPO_PUBLIC_LOG_LEVEL": "warn",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ktpflodilhtcypuwjzdn.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_mdCCv4ZeV9KAO-l5SdVXag_J_M4Pzj6"
+      }
+    }
   },
   "submit": {
     "production": {}

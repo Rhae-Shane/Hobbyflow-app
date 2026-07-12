@@ -8,10 +8,17 @@ const log = createLogger('auth');
 
 WebBrowser.maybeCompleteAuthSession();
 
+/** Standalone APK/IPA: hobbyflow://auth/callback — must be allow-listed in Supabase Auth. */
 const redirectTo = makeRedirectUri({
   scheme: 'hobbyflow',
-  path: '',
+  path: 'auth/callback',
 });
+
+log.info('OAuth redirect URI', { redirectTo });
+
+export function getOAuthRedirectUri() {
+  return redirectTo;
+}
 
 export async function createSessionFromUrl(url: string) {
   const { params, errorCode } = QueryParams.getQueryParams(url);
