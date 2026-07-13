@@ -19,7 +19,7 @@ const PATH_PREVIEW = [
   { n: 1, title: 'First session', meta: '15m', active: true },
   { n: 2, title: 'Build the habit', meta: '20m', active: false },
   { n: 3, title: 'Practice round', meta: '10m', active: false },
-  { n: 4, title: 'Level check', meta: '8 MCQs', active: false },
+  { n: 4, title: 'Level check', meta: 'Practice', active: false },
 ] as const;
 
 function PathPreview() {
