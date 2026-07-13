@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,9 +8,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import type { GoalCardState, LessonPlanState } from '@/types/roadmapCreation.types';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { fonts, radii, spacing } from '@/constants/tokens';
 import {
   buildOutlineMetaChips,
   OUTLINE_CHANGE_SUGGESTIONS,
@@ -61,75 +61,76 @@ export function RequestChangesModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Request Changes</Text>
-            <Pressable onPress={handleClose} hitSlop={12} disabled={isSubmitting}>
-              <Text style={styles.modalClose}>✕</Text>
-            </Pressable>
-          </View>
+    <BottomSheetOrModal
+      visible={visible}
+      onClose={handleClose}
+      maxHeight="85%"
+      sheetStyle={styles.modalCard}
+    >
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Request Changes</Text>
+        <Pressable onPress={handleClose} hitSlop={12} disabled={isSubmitting}>
+          <Text style={styles.modalClose}>✕</Text>
+        </Pressable>
+      </View>
 
-          <View style={styles.suggestionWrap}>
-            {OUTLINE_CHANGE_SUGGESTIONS.map((suggestion) => {
-              const isSelected = selected === suggestion;
-              return (
-                <Pressable
-                  key={suggestion}
-                  style={[styles.suggestionChip, isSelected && styles.suggestionChipSelected]}
-                  onPress={() => handleSelect(suggestion)}
-                  disabled={isSubmitting}
-                >
-                  <Text
-                    style={[
-                      styles.suggestionText,
-                      isSelected && styles.suggestionTextSelected,
-                    ]}
-                  >
-                    {suggestion}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <TextInput
-            style={styles.changeInput}
-            value={customText}
-            onChangeText={setCustomText}
-            placeholder="Describe the changes you want…"
-            placeholderTextColor={onboardingColors.textMuted}
-            multiline
-            editable={!isSubmitting}
-          />
-
-          <View style={styles.modalActions}>
+      <View style={styles.suggestionWrap}>
+        {OUTLINE_CHANGE_SUGGESTIONS.map((suggestion) => {
+          const isSelected = selected === suggestion;
+          return (
             <Pressable
-              style={styles.cancelButton}
-              onPress={handleClose}
+              key={suggestion}
+              style={[styles.suggestionChip, isSelected && styles.suggestionChipSelected]}
+              onPress={() => handleSelect(suggestion)}
               disabled={isSubmitting}
             >
-              <Text style={styles.cancelButtonText}>CANCEL</Text>
+              <Text
+                style={[
+                  styles.suggestionText,
+                  isSelected && styles.suggestionTextSelected,
+                ]}
+              >
+                {suggestion}
+              </Text>
             </Pressable>
-            <Pressable
-              style={[
-                styles.submitButton,
-                (!customText.trim() || isSubmitting) && styles.ctaDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!customText.trim() || isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color={onboardingColors.primaryText} />
-              ) : (
-                <Text style={styles.submitButtonText}>SUBMIT</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
+          );
+        })}
       </View>
-    </Modal>
+
+      <TextInput
+        style={styles.changeInput}
+        value={customText}
+        onChangeText={setCustomText}
+        placeholder="Describe the changes you want…"
+        placeholderTextColor={onboardingColors.textMuted}
+        multiline
+        editable={!isSubmitting}
+      />
+
+      <View style={styles.modalActions}>
+        <Pressable
+          style={styles.cancelButton}
+          onPress={handleClose}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.cancelButtonText}>CANCEL</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.submitButton,
+            (!customText.trim() || isSubmitting) && styles.ctaDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={!customText.trim() || isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={onboardingColors.primaryText} />
+          ) : (
+            <Text style={styles.submitButtonText}>SUBMIT</Text>
+          )}
+        </Pressable>
+      </View>
+    </BottomSheetOrModal>
   );
 }
 
@@ -237,17 +238,18 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    fontWeight: '600',
   },
   title: {
     color: onboardingColors.text,
+    fontFamily: fonts.display,
     fontSize: 28,
-    fontWeight: '700',
     lineHeight: 34,
   },
   description: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 15,
     lineHeight: 22,
   },
@@ -267,8 +269,8 @@ const styles = StyleSheet.create({
   },
   metaChipText: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    fontWeight: '500',
   },
   list: {
     flex: 1,
@@ -282,12 +284,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 16,
-    fontWeight: '700',
   },
   sectionCount: {
     color: onboardingColors.textMuted,
-    fontWeight: '500',
+    fontFamily: fonts.bodyMedium,
   },
   lessonRow: {
     backgroundColor: '#FFFFFF',
@@ -309,8 +311,8 @@ const styles = StyleSheet.create({
   lessonName: {
     color: onboardingColors.text,
     flex: 1,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 15,
-    fontWeight: '600',
   },
   chevron: {
     color: onboardingColors.textMuted,
@@ -322,12 +324,14 @@ const styles = StyleSheet.create({
   },
   hook: {
     color: onboardingColors.text,
+    fontFamily: fonts.body,
     fontSize: 14,
     fontStyle: 'italic',
     lineHeight: 20,
   },
   meaning: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -345,8 +349,8 @@ const styles = StyleSheet.create({
   },
   secondaryCtaText: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '800',
     letterSpacing: 0.4,
   },
   primaryCta: {
@@ -357,26 +361,16 @@ const styles = StyleSheet.create({
   },
   primaryCtaText: {
     color: onboardingColors.primaryText,
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '800',
     letterSpacing: 0.4,
   },
   ctaDisabled: {
     opacity: 0.6,
   },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
   modalCard: {
     backgroundColor: onboardingColors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     gap: spacing.md,
-    maxHeight: '85%',
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
   },
   modalHeader: {
     alignItems: 'center',
@@ -385,8 +379,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: onboardingColors.text,
+    fontFamily: fonts.display,
     fontSize: 22,
-    fontWeight: '700',
   },
   modalClose: {
     color: onboardingColors.textMuted,
@@ -412,8 +406,8 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
   },
   suggestionTextSelected: {
     color: onboardingColors.primaryText,
@@ -424,6 +418,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: 1,
     color: onboardingColors.text,
+    fontFamily: fonts.body,
     fontSize: 15,
     minHeight: 110,
     padding: spacing.md,
@@ -444,8 +439,8 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '800',
   },
   submitButton: {
     alignItems: 'center',
@@ -456,7 +451,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: onboardingColors.primaryText,
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '800',
   },
 });

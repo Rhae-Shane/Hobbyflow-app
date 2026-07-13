@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { DailyTaskHistoryList } from '@/components/daily-tasks/DailyTaskHistoryList';
 import { TodayTaskPanel } from '@/components/daily-tasks/TodayTaskPanel';
@@ -7,6 +7,7 @@ import { ScreenShell } from '@/components/ui/ScreenShell';
 import { dashboardColors } from '@/constants/dashboardTokens';
 import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { showAlert } from '@/store/useAlertStore';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { usePlanStore } from '@/store/usePlanStore';
 
@@ -40,7 +41,7 @@ export function DailyTasksScreen() {
     if (!task) {
       const message =
         useGamificationStore.getState().lastTaskError ?? 'Please try again in a moment.';
-      Alert.alert('Couldn’t generate', message);
+      showAlert('Couldn’t generate', message);
     }
   };
 
@@ -72,7 +73,7 @@ export function DailyTasksScreen() {
           onComplete={(taskId) => {
             void completeDailyTask(taskId).then((result) => {
               if (result && result.ratingAwarded > 0) {
-                Alert.alert('Nice', `+${result.ratingAwarded} rating`);
+                showAlert('Nice', `+${result.ratingAwarded} rating`);
               }
             });
           }}

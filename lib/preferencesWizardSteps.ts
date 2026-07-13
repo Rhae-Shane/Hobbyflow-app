@@ -28,6 +28,9 @@ export type PreferenceSingleKey = keyof Pick<
   'userRole' | 'ageRange' | 'resourceBudget'
 >;
 
+/** Open Doodles–style keys used on interstitial steps (see categoryIllustrations). */
+export type OnboardingIllustrationKey = 'plant' | 'reading' | 'sitting' | 'meditating';
+
 export type WizardStep = {
   id: string;
   kind: StepKind;
@@ -37,7 +40,8 @@ export type WizardStep = {
   singleKey?: PreferenceSingleKey;
   minSelection?: number;
   chipLayout?: ChipLayout;
-  emoji?: string;
+  /** Line-art doodle for interstitial / summary moments (no emoji). */
+  illustration?: OnboardingIllustrationKey;
   otherPlaceholder?: string;
   showOtherAddButton?: boolean;
   allowOther?: boolean;
@@ -103,7 +107,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     kind: 'interstitial',
     title: "Great! We'll help you practice what you thought you didn't have time for",
     subtitle: 'Finally pick up the hobbies you have always wanted to try.',
-    emoji: '🔺',
+    illustration: 'plant',
   },
   {
     id: 'accessibility',
@@ -160,6 +164,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     kind: 'summary',
     title: 'Noted!',
     subtitle: "We'll build roadmaps that fit you",
+    illustration: 'sitting',
   },
   {
     id: 'interstitial-personalized',
@@ -167,7 +172,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     title: 'Personalized learning for you',
     subtitle:
       'We will adapt techniques to your needs, environment, budget, and preferred formats.\n\nYou can update this later in the settings.',
-    emoji: '🐦',
+    illustration: 'reading',
   },
 ];
 

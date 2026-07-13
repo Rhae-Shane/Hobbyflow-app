@@ -2,8 +2,10 @@ import { type ReactNode, useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { usePathname, useRouter } from 'expo-router';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { theme } from '@/constants/theme';
-import { spacing } from '@/constants/tokens';
+import { fonts, spacing } from '@/constants/tokens';
+import { learnInPublic } from '@/constants/learnInPublic';
 import { useAuth } from '@/hooks/useAuth';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { useUserStore } from '@/store/useUserStore';
@@ -19,20 +21,32 @@ type ChromeConfig =
     };
 
 function resolveChrome(pathname: string): ChromeConfig {
+  if (pathname.includes('/leaderboard')) {
+    return { variant: 'nav', title: 'Leaderboard', showBack: true, right: null };
+  }
   if (pathname.includes('/streak')) {
     return { variant: 'nav', title: 'Streak', showBack: true, closeStyle: true, right: 'streak-savers' };
   }
   if (pathname.includes('/daily-tasks')) {
     return { variant: 'nav', title: 'Daily Tasks', showBack: true, right: null };
   }
+  if (pathname.includes('/my-posts')) {
+    return { variant: 'nav', title: learnInPublic.myShowcase, showBack: true, right: null };
+  }
+  if (pathname.includes('/post/')) {
+    return { variant: 'nav', title: 'Post', showBack: true, right: null };
+  }
   if (pathname.includes('/pact')) {
     return { variant: 'nav', title: 'The Pact', showBack: true, right: null };
   }
   if (pathname.includes('/search')) {
-    return { variant: 'nav', title: 'Search', showBack: true, right: null };
+    return { variant: 'nav', title: learnInPublic.findPartners, showBack: true, right: null };
   }
   if (pathname.includes('/roadmap-preview')) {
     return { variant: 'nav', title: 'Preview', showBack: true, right: null };
+  }
+  if (pathname.includes('/explore')) {
+    return { variant: 'nav', title: 'Explore Module', showBack: false, right: null };
   }
   if (pathname.includes('/roadmap/')) {
     return { variant: 'nav', title: 'Explore Module', showBack: true, right: null };
@@ -50,7 +64,7 @@ function resolveChrome(pathname: string): ChromeConfig {
     return { variant: 'nav', title: 'Profile', showBack: true, right: null };
   }
   if (pathname.includes('/feed')) {
-    return { variant: 'nav', title: 'Feed', showBack: false, right: null };
+    return { variant: 'nav', title: learnInPublic.title, showBack: true, right: null };
   }
   if (pathname.includes('/generate')) {
     return { variant: 'nav', title: 'Generate', showBack: false, right: null };
@@ -121,9 +135,12 @@ function HomeChrome() {
         )}
       </Pressable>
 
-      <Text style={styles.homeTitle} numberOfLines={1}>
-        HobbyFlow
-      </Text>
+      <View style={styles.homeBrand}>
+        <BrandLogo size={28} />
+        <Text style={styles.homeTitle} numberOfLines={1}>
+          HobbyFlow
+        </Text>
+      </View>
 
       <View style={styles.stats}>
         <Pressable
@@ -138,7 +155,7 @@ function HomeChrome() {
 
         <Pressable
           style={styles.statPill}
-          onPress={() => router.push('/(app)/streak' as never)}
+          onPress={() => router.push('/(app)/leaderboard' as never)}
           accessibilityLabel={`XP ${rating}`}
           testID="chrome-xp"
         >
@@ -243,14 +260,22 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 16,
-    fontWeight: '800',
+  },
+  homeBrand: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: 0,
   },
   homeTitle: {
     color: theme.colors.text,
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '800',
+    flexShrink: 1,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    letterSpacing: -0.3,
   },
   stats: {
     alignItems: 'center',
@@ -268,13 +293,13 @@ const styles = StyleSheet.create({
   },
   statText: {
     color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   xpGlyph: {
     color: '#E6A800',
+    fontFamily: fonts.bodyBold,
     fontSize: 13,
-    fontWeight: '800',
   },
   row: {
     alignItems: 'center',
@@ -301,8 +326,8 @@ const styles = StyleSheet.create({
   title: {
     color: theme.colors.text,
     flex: 1,
+    fontFamily: fonts.bodyBold,
     fontSize: 18,
-    fontWeight: '800',
     marginHorizontal: spacing.sm,
     textAlign: 'center',
   },
@@ -330,14 +355,14 @@ const styles = StyleSheet.create({
   },
   shieldPlus: {
     color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
     fontSize: 11,
-    fontWeight: '800',
     lineHeight: 12,
   },
   saverCount: {
     color: '#4DA3FF',
+    fontFamily: fonts.bodyBold,
     fontSize: 14,
-    fontWeight: '800',
   },
   infoBtn: {
     alignItems: 'center',

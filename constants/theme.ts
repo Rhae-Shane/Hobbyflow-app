@@ -1,8 +1,13 @@
+import { fonts, typeRoles } from '@/constants/typography';
+
 /**
  * HobbyFlow global design system — Health Dashboard palette.
- * Soft gray canvas, lavender + orange accents, black CTAs, high radii.
+ * Soft gray canvas, lavender + orange accents, black CTAs, moderate radii.
+ * Type: Fraunces (display) + DM Sans (body).
  */
 export const theme = {
+  fonts,
+  type: typeRoles,
   colors: {
     background: '#F6F6F6',
     surface: '#FFFFFF',
@@ -36,19 +41,21 @@ export const theme = {
     heroDeep: '#D4B8E8',
   },
   radii: {
-    card: 24,
+    /** Soft feed / surface cards (Learn in public) */
+    card: 26,
     sheet: 28,
-    block: 30,
+    /** Pastel hobby / hero tiles */
+    block: 28,
     strip: 24,
     tile: 22,
-    input: 28,
-    hero: 32,
+    input: 18,
+    hero: 28,
     pill: 999,
     avatar: 999,
   },
   shadow: {
     color: '#141414',
-    opacity: 0.07,
+    opacity: 0.06,
     radius: 12,
     offsetY: 4,
   },

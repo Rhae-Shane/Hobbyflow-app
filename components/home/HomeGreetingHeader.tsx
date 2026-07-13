@@ -3,7 +3,7 @@ import {
   dashboardColors,
   dashboardRadii,
 } from '@/constants/dashboardTokens';
-import { spacing } from '@/constants/tokens';
+import { fonts, spacing } from '@/constants/tokens';
 
 type Props = {
   username: string | null;
@@ -70,12 +70,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     color: dashboardColors.text,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    letterSpacing: -0.4,
   },
   sub: {
     color: dashboardColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 13,
     marginTop: 2,
   },

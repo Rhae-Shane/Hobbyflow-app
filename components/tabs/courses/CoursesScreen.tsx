@@ -48,7 +48,7 @@ export function CoursesScreen() {
 
   const openRoadmap = (rowId: string) => {
     setSelectedRoadmapId(rowId);
-    router.push(`/(app)/roadmap/${rowId}` as never);
+    router.push('/(app)/(tabs)/explore' as never);
   };
 
   const goGenerate = () => router.push('/(app)/(tabs)/generate' as never);

@@ -14,6 +14,7 @@ import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { activateRoadmap, fetchRoadmapDetail } from '@/services/roadmaps';
 import { fetchUserHobbies } from '@/services/hobbies';
+import { completeOnboarding } from '@/services/user';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanStore } from '@/store/usePlanStore';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
@@ -59,7 +60,9 @@ export function RoadmapPreviewScreen() {
       const hobbies = await fetchUserHobbies(user.id);
       setHobbies(hobbies);
       usePlanStore.setState({ activeHobbyId: activated.hobby_id });
-      setCompletedOnboardingAt(new Date().toISOString());
+      const now = new Date().toISOString();
+      await completeOnboarding(user.id);
+      setCompletedOnboardingAt(now);
       router.replace('/(app)/(tabs)');
     } catch {
       router.replace('/(app)/(tabs)');

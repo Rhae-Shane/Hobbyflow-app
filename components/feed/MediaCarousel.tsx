@@ -1,5 +1,5 @@
 import { Audio, ResizeMode, Video } from 'expo-av';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -7,20 +7,28 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
 } from 'react-native';
-import { onboardingColors } from '@/constants/onboardingTokens';
+import { theme } from '@/constants/theme';
 import { radii, spacing } from '@/constants/tokens';
 import type { PostMedia } from '@/types/post.types';
-
-const WIDTH = Dimensions.get('window').width - spacing.md * 2;
 
 type Props = {
   media: PostMedia[];
   onPressItem?: (index: number) => void;
+  /** Extra horizontal inset (e.g. avatar column) beyond screen padding. */
+  contentInset?: number;
+  borderRadius?: number;
 };
 
-function AudioPlayer({ url, durationMs }: { url: string; durationMs: number | null }) {
+function AudioPlayer({
+  url,
+  durationMs,
+  width,
+}: {
+  url: string;
+  durationMs: number | null;
+  width: number;
+}) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -55,14 +63,24 @@ function AudioPlayer({ url, durationMs }: { url: string; durationMs: number | nu
     durationMs != null ? `${Math.round(durationMs / 1000)}s` : 'Audio';
 
   return (
-    <Pressable style={styles.audioBox} onPress={() => void toggle()}>
+    <Pressable style={[styles.audioBox, { width }]} onPress={() => void toggle()}>
       <Text style={styles.audioGlyph}>{playing ? '❚❚' : '▶'}</Text>
       <Text style={styles.audioLabel}>{secs}</Text>
     </Pressable>
   );
 }
 
-export function MediaCarousel({ media, onPressItem }: Props) {
+export function MediaCarousel({
+  media,
+  onPressItem,
+  contentInset = 0,
+  borderRadius = radii.card,
+}: Props) {
+  const width = useMemo(
+    () => Dimensions.get('window').width - spacing.md * 2 - contentInset,
+    [contentInset],
+  );
+
   if (!media.length) return null;
 
   return (
@@ -70,28 +88,32 @@ export function MediaCarousel({ media, onPressItem }: Props) {
       horizontal
       pagingEnabled
       showsHorizontalScrollIndicator={false}
-      style={styles.carousel}
+      style={[styles.carousel, { width, borderRadius }]}
     >
       {media.map((item, index) => (
         <Pressable
           key={item.id}
-          style={styles.slide}
+          style={{ width }}
           onPress={() => onPressItem?.(index)}
         >
           {item.kind === 'image' ? (
-            <Image source={{ uri: item.publicUrl }} style={styles.media} resizeMode="cover" />
+            <Image
+              source={{ uri: item.publicUrl }}
+              style={[styles.media, { width, borderRadius }]}
+              resizeMode="cover"
+            />
           ) : null}
           {item.kind === 'video' ? (
             <Video
               source={{ uri: item.publicUrl }}
-              style={styles.media}
+              style={[styles.media, { width, borderRadius }]}
               useNativeControls
               resizeMode={ResizeMode.CONTAIN}
               isMuted
             />
           ) : null}
           {item.kind === 'audio' ? (
-            <AudioPlayer url={item.publicUrl} durationMs={item.durationMs} />
+            <AudioPlayer url={item.publicUrl} durationMs={item.durationMs} width={width} />
           ) : null}
         </Pressable>
       ))}
@@ -101,37 +123,30 @@ export function MediaCarousel({ media, onPressItem }: Props) {
 
 const styles = StyleSheet.create({
   carousel: {
-    borderRadius: radii.card,
     overflow: 'hidden',
   },
-  slide: {
-    width: WIDTH,
-  },
   media: {
-    backgroundColor: '#E8F3FF',
+    backgroundColor: theme.colors.navActiveSoft,
     height: 280,
-    width: WIDTH,
   },
   audioBox: {
     alignItems: 'center',
-    backgroundColor: '#E8F6FE',
-    borderColor: onboardingColors.primaryBorder,
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.primaryBorder,
     borderRadius: radii.card,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
     height: 88,
     justifyContent: 'center',
-    marginHorizontal: 0,
-    width: WIDTH,
   },
   audioGlyph: {
-    color: onboardingColors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 22,
     fontWeight: '800',
   },
   audioLabel: {
-    color: onboardingColors.text,
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },

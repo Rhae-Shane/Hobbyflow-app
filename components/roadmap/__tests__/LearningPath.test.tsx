@@ -48,6 +48,21 @@ describe('LearningPathNodeView', () => {
     expect(getByText('Section Review')).toBeTruthy();
     expect(getByText('0/2 sessions')).toBeTruthy();
   });
+
+  it('renders skipped lesson with strikethrough label', () => {
+    const skipped: LearningPathNode = {
+      ...baseNode,
+      id: 'lesson-skipped',
+      visualState: 'skipped',
+      lessonStatus: 'skipped',
+    };
+    const { getByText, getByTestId } = render(
+      <LearningPathNodeView item={skipped} onPress={jest.fn()} />,
+    );
+    expect(getByText('Keeping Time')).toBeTruthy();
+    expect(getByText('Skipped')).toBeTruthy();
+    expect(getByTestId('path-node-lesson-skipped')).toBeTruthy();
+  });
 });
 
 describe('LearningPathSectionBar', () => {
@@ -63,6 +78,7 @@ describe('LearningPathSectionBar', () => {
           name: 'Rhythm Basics',
           completedLessons: 0,
           totalLessons: 3,
+          activeLessons: 3,
         }}
         expanded={false}
         onToggle={onToggle}

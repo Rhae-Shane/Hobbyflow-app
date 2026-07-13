@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createLogger } from '@/lib/logger';
 import { getKnownUserMessage, ErrorCodes } from '@/lib/errors';
+import { Sentry } from '@/lib/sentry';
 import { colors, radii, spacing } from '@/constants/tokens';
 
 const log = createLogger('ErrorBoundary');
@@ -25,6 +26,9 @@ export class ErrorBoundary extends Component<Props, State> {
     log.error('Uncaught UI error', {
       error: error.message,
       componentStack: info.componentStack,
+    });
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
     });
   }
 

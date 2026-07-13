@@ -17,8 +17,9 @@ import { HomeDailyTaskBlock } from '@/components/home/HomeDailyTaskBlock';
 import { FLOATING_TAB_BAR_HEIGHT_WITH_ASK } from '@/components/navigation/tabBarLayout';
 import { PlantDoodle } from '@/components/home/HobbyBlockIllustration';
 import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
-import { spacing } from '@/constants/tokens';
+import { fonts, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchHobbyNameIllustrationMap } from '@/services/hobbyCatalog';
 import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
 import { useUserStore } from '@/store/useUserStore';
@@ -41,7 +42,14 @@ export function HomeDashboardScreen({
     enabled: Boolean(user?.id),
   });
 
+  const illustrationQuery = useQuery({
+    queryKey: ['hobby-name-illustrations'],
+    queryFn: fetchHobbyNameIllustrationMap,
+    staleTime: 60 * 60_000,
+  });
+
   const roadmaps = roadmapsQuery.data ?? [];
+  const illustrationMap = illustrationQuery.data ?? {};
   const progressIds = useMemo(() => roadmaps.map((r) => r.id), [roadmaps]);
 
   const progressQueries = useQueries({
@@ -68,7 +76,7 @@ export function HomeDashboardScreen({
 
   const openRoadmap = (roadmapId: string) => {
     setSelectedRoadmapId(roadmapId);
-    router.push(`/(app)/roadmap/${roadmapId}` as never);
+    router.push('/(app)/(tabs)/explore' as never);
   };
 
   const goGenerate = () => router.push('/(app)/(tabs)/generate' as never);
@@ -114,6 +122,7 @@ export function HomeDashboardScreen({
             onOpen={openRoadmap}
             onAddHobby={goGenerate}
             onSeeAll={goCourses}
+            illustrationMap={illustrationMap}
           />
         )}
 
@@ -147,11 +156,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: dashboardColors.text,
+    fontFamily: fonts.display,
     fontSize: 20,
-    fontWeight: '800',
   },
   emptyBody: {
     color: dashboardColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -165,7 +175,7 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: {
     color: dashboardColors.ctaText,
+    fontFamily: fonts.bodyBold,
     fontSize: 14,
-    fontWeight: '800',
   },
 });

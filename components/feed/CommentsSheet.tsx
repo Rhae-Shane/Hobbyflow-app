@@ -3,7 +3,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -15,12 +14,13 @@ import {
 } from 'react-native';
 import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { fonts, radii, spacing } from '@/constants/tokens';
 import {
   addPostComment,
   listPostComments,
   softDeletePostComment,
 } from '@/services/posts';
+import { showAlert } from '@/store/useAlertStore';
 import { MAX_COMMENT_LENGTH, type PostComment } from '@/types/post.types';
 
 dayjs.extend(relativeTime);
@@ -96,7 +96,7 @@ export function CommentsSheet({
       (currentUserId === comment.authorId || currentUserId === postAuthorId);
     if (!canDelete) return;
 
-    Alert.alert('Delete comment?', 'This removes the comment for everyone.', [
+    showAlert('Delete comment?', 'This removes the comment for everyone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -206,12 +206,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: onboardingColors.text,
+    fontFamily: fonts.display,
     fontSize: 18,
-    fontWeight: '800',
   },
   close: {
     color: onboardingColors.primaryText,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
   },
   list: {
     flexGrow: 0,
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -240,25 +241,28 @@ const styles = StyleSheet.create({
   },
   commentHandle: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 13,
-    fontWeight: '800',
   },
   commentText: {
     color: onboardingColors.text,
+    fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,
   },
   commentTime: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 11,
   },
   delete: {
     color: '#B42318',
+    fontFamily: fonts.bodyBold,
     fontSize: 12,
-    fontWeight: '700',
   },
   error: {
     color: '#B42318',
+    fontFamily: fonts.body,
     fontSize: 13,
     marginBottom: spacing.xs,
   },
@@ -277,6 +281,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     color: onboardingColors.text,
     flex: 1,
+    fontFamily: fonts.body,
     fontSize: 15,
     maxHeight: 88,
     minHeight: 40,
@@ -296,6 +301,6 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: onboardingColors.primaryText,
-    fontWeight: '800',
+    fontFamily: fonts.bodyBold,
   },
 });

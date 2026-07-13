@@ -25,7 +25,7 @@ export function SparkleIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   );
 }
 
-/** Atom / orbital mark — matches Ask SuperKalam–style coach CTA. */
+
 export function AtomIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -200,6 +200,22 @@ export function CoursesTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
       <Path d="M8 9H16" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
       <Path d="M8 12.5H16" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
       <Path d="M8 16H13" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Map / path mark for Explore Module tab. */
+export function ExploreTabIcon({ size = 22, color = DEFAULT_ICON }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4.5 7.5L9.5 5.5L14.5 7.5L19.5 5.5V16.5L14.5 18.5L9.5 16.5L4.5 18.5V7.5Z"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinejoin="round"
+      />
+      <Path d="M9.5 5.5V16.5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+      <Path d="M14.5 7.5V18.5" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }

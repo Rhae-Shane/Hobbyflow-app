@@ -51,7 +51,8 @@ export type RoadmapLessonStatus =
   | 'ready'
   | 'in_progress'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'skipped';
 
 export type GenerateLessonResponse = {
   status: 'success' | 'generating' | 'failed';

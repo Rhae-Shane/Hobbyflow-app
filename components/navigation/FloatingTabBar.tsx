@@ -5,11 +5,13 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { AskAnythingSheet } from '@/components/ask/AskAnythingSheet';
 import {
   AtomIcon,
+  ExploreTabIcon,
   FeedTabIcon,
   GenerateTabIcon,
   HomeTabIcon,
 } from '@/components/icons/AppIcons';
 import { theme } from '@/constants/theme';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { hapticMedium, hapticSelection } from '@/utils/haptics';
 
 const ACTIVE_BG = theme.colors.navActiveSoft;
@@ -18,171 +20,175 @@ const ACTIVE = theme.colors.navActive;
 
 const ASK_GRADIENT = ['#4DA3FF', '#1A73E8', '#1557C0'] as const;
 const ASK_SHADOW = '#1A73E8';
-const ATOM_SIZE = 18;
+
+/** Pill resting size → circle size when morphing. */
+const ASK_PILL_WIDTH = 156;
+const ASK_CIRCLE_SIZE = 46;
+const ASK_TEXT_WIDTH = 86;
+const ASK_ICON_SIZE = 22;
+/** One morph phase (pill↔circle + matching icon spin). */
+const ASK_MORPH_MS = 1100;
+const ASK_HOLD_MS = 900;
 
 const TAB_ICONS: Record<
   string,
   (props: { color: string; focused: boolean }) => ReactElement
 > = {
-  index: ({ color }) => <HomeTabIcon size={22} color={color} />,
   feed: ({ color, focused }) => <FeedTabIcon size={22} color={color} filled={focused} />,
+  index: ({ color }) => <HomeTabIcon size={22} color={color} />,
+  explore: ({ color }) => <ExploreTabIcon size={22} color={color} />,
   generate: ({ color }) => <GenerateTabIcon size={22} color={color} />,
 };
 
-/** Atom: rotate → collapse to circle → reverse rotate → restore. */
-function AskCoachAtom({ color = '#FFFFFF' }: { color?: string }) {
-  const rotate = useRef(new Animated.Value(0)).current;
+/** Visual tab order — Learn in Public (feed) rightmost. */
+const TAB_ORDER = ['index', 'explore', 'generate', 'feed'] as const;
+
+/**
+ * Ask Coach CTA: pill↔circle morph and icon rotation share one progress value
+ * so they stay locked together (slow in both directions).
+ */
+function AskCoachButton({ onPress }: { onPress: () => void }) {
   const morph = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(rotate, {
-          toValue: 1,
-          duration: 1100,
-          useNativeDriver: true,
-        }),
+        Animated.delay(ASK_HOLD_MS),
+        // Pill → circle + icon 360° CW (same progress)
         Animated.timing(morph, {
           toValue: 1,
-          duration: 380,
-          useNativeDriver: true,
+          duration: ASK_MORPH_MS,
+          useNativeDriver: false,
         }),
-        Animated.timing(rotate, {
-          toValue: 0,
-          duration: 1100,
-          useNativeDriver: true,
-        }),
+        Animated.delay(ASK_HOLD_MS),
+        // Circle → pill + icon 360° CCW (same progress)
         Animated.timing(morph, {
           toValue: 0,
-          duration: 380,
-          useNativeDriver: true,
+          duration: ASK_MORPH_MS,
+          useNativeDriver: false,
         }),
-        Animated.delay(900),
       ]),
     );
     loop.start();
     return () => {
       loop.stop();
-      rotate.setValue(0);
       morph.setValue(0);
     };
-  }, [morph, rotate]);
+  }, [morph]);
 
-  const spin = rotate.interpolate({
+  const width = morph.interpolate({
+    inputRange: [0, 1],
+    outputRange: [ASK_PILL_WIDTH, ASK_CIRCLE_SIZE],
+  });
+
+  const padH = morph.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 0],
+  });
+
+  const textOpacity = morph.interpolate({
+    inputRange: [0, 0.35, 1],
+    outputRange: [1, 0, 0],
+  });
+
+  const textWidth = morph.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [ASK_TEXT_WIDTH, 0, 0],
+  });
+
+  const textMargin = morph.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [8, 0, 0],
+  });
+
+  // Rotation tied 1:1 to pill morph
+  const spin = morph.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  const atomOpacity = morph.interpolate({
-    inputRange: [0, 0.45, 1],
-    outputRange: [1, 0.35, 0],
-  });
-
-  const atomScale = morph.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.35],
-  });
-
-  const circleOpacity = morph.interpolate({
-    inputRange: [0, 0.45, 1],
-    outputRange: [0, 0.55, 1],
-  });
-
-  const circleScale = morph.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.25, 1],
-  });
-
   return (
-    <Animated.View style={[styles.atomWrap, { transform: [{ rotate: spin }] }]}>
-      <Animated.View
-        style={[
-          styles.atomLayer,
-          {
-            opacity: atomOpacity,
-            transform: [{ scale: atomScale }],
-          },
-        ]}
+    <Animated.View
+      style={[
+        styles.askShadow,
+        {
+          width,
+          height: ASK_CIRCLE_SIZE,
+          borderRadius: ASK_CIRCLE_SIZE / 2,
+        },
+      ]}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ask Coach"
+        onPress={onPress}
+        style={styles.askPressable}
+        testID="tab-ask"
       >
-        <AtomIcon size={ATOM_SIZE} color={color} />
-      </Animated.View>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.atomCircle,
-          {
-            backgroundColor: color,
-            opacity: circleOpacity,
-            transform: [{ scale: circleScale }],
-          },
-        ]}
-      />
+        <LinearGradient
+          colors={[...ASK_GRADIENT]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.askCoach}
+        >
+          <Animated.View style={[styles.askInner, { paddingHorizontal: padH }]}>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <AtomIcon size={ASK_ICON_SIZE} color="#FFFFFF" />
+            </Animated.View>
+            <Animated.View
+              style={{
+                marginLeft: textMargin,
+                opacity: textOpacity,
+                overflow: 'hidden',
+                width: textWidth,
+              }}
+            >
+              <Text style={styles.askCoachText} numberOfLines={1}>
+                Ask Coach
+              </Text>
+            </Animated.View>
+          </Animated.View>
+        </LinearGradient>
+      </Pressable>
     </Animated.View>
   );
 }
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [askOpen, setAskOpen] = useState(false);
-  const pulse = useRef(new Animated.Value(1)).current;
   const focusedRoute = state.routes[state.index]?.name;
   const showAskCoach = focusedRoute === 'index';
+  const keyboardVisible = useKeyboardVisible();
 
   useEffect(() => {
     if (!showAskCoach && askOpen) setAskOpen(false);
   }, [showAskCoach, askOpen]);
 
-  useEffect(() => {
-    if (!showAskCoach) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1.03,
-          duration: 1400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 1400,
-          useNativeDriver: true,
-        }),
-      ]),
+  // Keep the floating pill from covering focused inputs above the keyboard.
+  if (keyboardVisible) {
+    return (
+      <AskAnythingSheet visible={askOpen} onClose={() => setAskOpen(false)} />
     );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse, showAskCoach]);
+  }
 
   return (
     <>
       <View style={styles.wrap} pointerEvents="box-none">
         {showAskCoach ? (
-          <Animated.View style={[styles.askWrap, { transform: [{ scale: pulse }] }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Ask Coach"
+          <View style={styles.askWrap}>
+            <AskCoachButton
               onPress={() => {
                 hapticMedium();
                 setAskOpen(true);
               }}
-              style={styles.askShadow}
-              testID="tab-ask"
-            >
-              <LinearGradient
-                colors={[...ASK_GRADIENT]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.askCoach}
-              >
-                <AskCoachAtom color="#FFFFFF" />
-                <Text style={styles.askCoachText}>Ask Coach</Text>
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
+            />
+          </View>
         ) : null}
 
         <View style={styles.pill}>
-          {state.routes
-            .filter((route) => route.name in TAB_ICONS)
-            .map((route) => {
+          {TAB_ORDER.map((routeName) => {
+              const route = state.routes.find((r) => r.name === routeName);
+              if (!route) return null;
               const index = state.routes.findIndex((r) => r.key === route.key);
               const focused = state.index === index;
               const { options } = descriptors[route.key];
@@ -215,6 +221,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
                   {Icon ? (
                     <Icon color={focused ? ACTIVE : INACTIVE} focused={focused} />
                   ) : null}
+                  <Text
+                    style={[styles.tabLabel, focused && styles.tabLabelActive]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -236,7 +248,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     bottom: 0,
-    elevation: 24,
+    elevation: 4,
     gap: 10,
     left: 0,
     paddingBottom: 10,
@@ -247,22 +259,28 @@ const styles = StyleSheet.create({
   },
   askWrap: {
     alignItems: 'center',
+    height: ASK_CIRCLE_SIZE,
+    justifyContent: 'center',
   },
   askShadow: {
-    borderRadius: theme.radii.pill,
-    elevation: 10,
+    elevation: 3,
+    overflow: 'hidden',
     shadowColor: ASK_SHADOW,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.32,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+  },
+  askPressable: {
+    flex: 1,
   },
   askCoach: {
+    flex: 1,
+  },
+  askInner: {
     alignItems: 'center',
-    borderRadius: theme.radii.pill,
+    flex: 1,
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    justifyContent: 'center',
   },
   askCoachText: {
     color: '#FFFFFF',
@@ -270,35 +288,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  atomWrap: {
-    alignItems: 'center',
-    height: ATOM_SIZE,
-    justifyContent: 'center',
-    width: ATOM_SIZE,
-  },
-  atomLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  atomCircle: {
-    borderRadius: ATOM_SIZE / 2,
-    height: ATOM_SIZE * 0.72,
-    width: ATOM_SIZE * 0.72,
-  },
   pill: {
     alignItems: 'center',
     alignSelf: 'stretch',
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
-    borderRadius: theme.radii.pill,
+    borderRadius: 18,
     borderWidth: 1,
-    elevation: 8,
+    elevation: 2,
     flexDirection: 'row',
     justifyContent: 'space-around',
     minHeight: 58,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     shadowColor: theme.shadow.color,
     shadowOffset: { width: 0, height: theme.shadow.offsetY },
     shadowOpacity: theme.shadow.opacity,
@@ -306,12 +308,26 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     alignItems: 'center',
-    borderRadius: 16,
-    height: 44,
+    borderRadius: 12,
+    flex: 1,
+    gap: 2,
     justifyContent: 'center',
-    width: 48,
+    maxWidth: 96,
+    minHeight: 50,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   tabBtnActive: {
     backgroundColor: ACTIVE_BG,
+  },
+  tabLabel: {
+    color: INACTIVE,
+    fontFamily: theme.fonts.bodyMedium,
+    fontSize: 10,
+    letterSpacing: -0.1,
+    textAlign: 'center',
+  },
+  tabLabelActive: {
+    color: ACTIVE,
   },
 });

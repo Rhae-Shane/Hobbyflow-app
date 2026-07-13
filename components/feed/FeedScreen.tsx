@@ -4,17 +4,20 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { CommentsSheet } from '@/components/feed/CommentsSheet';
+import { FeedComposeCard } from '@/components/feed/FeedComposeCard';
 import { PostCard } from '@/components/feed/PostCard';
 import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
-import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
-import { spacing } from '@/constants/tokens';
+import { learnInPublic } from '@/constants/learnInPublic';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
 import { listFeed, softDeletePost } from '@/services/posts';
 import { fetchOwnHobbyTags } from '@/services/profileSearch';
@@ -31,6 +34,7 @@ export function FeedScreen() {
   const postsRef = useRef<FeedPost[]>([]);
   const [myTags, setMyTags] = useState<PostHobbyTag[]>([]);
   const [filter, setFilter] = useState<TagFilter>({ kind: 'all' });
+  const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -106,88 +110,79 @@ export function FeedScreen() {
     }, [load, loadTags]),
   );
 
-  const onCompose = () => {
-    if (!username) {
-      router.push('/(app)/claim-username' as never);
-      return;
-    }
-    if (myTags.length === 0) {
-      router.push('/(app)/roadmap-creation' as never);
-      return;
-    }
-    router.push('/(app)/post/compose' as never);
-  };
-
   const applyFilter = (next: TagFilter) => {
     setFilter(next);
+    setFilterOpen(false);
     setLoading(true);
     void load('replace', next);
   };
 
   const emptyTitle =
-    myTags.length === 0
-      ? 'Add a hobby to see posts from learners like you.'
-      : 'No posts for your hobbies yet — be the first.';
+    myTags.length === 0 ? learnInPublic.emptyNoHobby : learnInPublic.emptyNoPosts;
 
-  const emptyCta = myTags.length === 0 ? 'Create a roadmap' : 'Create a post';
+  const emptyCta = myTags.length === 0 ? 'Create a roadmap' : null;
 
   return (
     <ScreenShell padded={false}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>HobbyFlow</Text>
-          <Text style={styles.title}>Feed</Text>
-        </View>
-        <Pressable style={styles.composeBtn} onPress={onCompose} accessibilityLabel="New post">
-          <Text style={styles.composeGlyph}>＋</Text>
-        </Pressable>
-      </View>
-
-      {myTags.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
+      <BottomSheetOrModal
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        animationType="fade"
+        maxHeight="70%"
+        padded={false}
+        sheetStyle={styles.modalCard}
+      >
+        <Text style={styles.modalTitle}>Select hobby</Text>
+        <Pressable
+          style={[
+            styles.optionRow,
+            filter.kind === 'all' && styles.optionRowActive,
+          ]}
+          onPress={() => applyFilter({ kind: 'all' })}
         >
-          <Pressable
-            style={[styles.filterChip, filter.kind === 'all' && styles.filterChipActive]}
-            onPress={() => applyFilter({ kind: 'all' })}
+          <Text
+            style={[
+              styles.optionText,
+              filter.kind === 'all' && styles.optionTextActive,
+            ]}
           >
-            <Text
-              style={[styles.filterText, filter.kind === 'all' && styles.filterTextActive]}
+            All my hobbies
+          </Text>
+          {filter.kind === 'all' ? (
+            <Ionicons name="checkmark" size={18} color={theme.colors.text} />
+          ) : null}
+        </Pressable>
+        {myTags.map((tag) => {
+          const active =
+            filter.kind === 'tag' &&
+            filter.tag.name.toLowerCase() === tag.name.toLowerCase();
+          return (
+            <Pressable
+              key={`${tag.source}-${tag.hobbyId ?? tag.name}`}
+              style={[styles.optionRow, active && styles.optionRowActive]}
+              onPress={() => applyFilter({ kind: 'tag', tag })}
             >
-              All my hobbies
-            </Text>
-          </Pressable>
-          {myTags.map((tag) => {
-            const active =
-              filter.kind === 'tag' &&
-              filter.tag.name.toLowerCase() === tag.name.toLowerCase();
-            return (
-              <Pressable
-                key={`${tag.source}-${tag.hobbyId ?? tag.name}`}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => applyFilter({ kind: 'tag', tag })}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]} numberOfLines={1}>
-                  {tag.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
+              <Text style={[styles.optionText, active && styles.optionTextActive]}>
+                {tag.name}
+              </Text>
+              {active ? (
+                <Ionicons name="checkmark" size={18} color={theme.colors.text} />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </BottomSheetOrModal>
 
       {loading ? (
-        <ActivityIndicator color={dashboardColors.text} style={{ marginTop: 48 }} />
+        <ActivityIndicator color={theme.colors.text} style={{ marginTop: 48 }} />
       ) : (
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
-            paddingHorizontal: spacing.md,
-            paddingBottom: TAB_SCROLL_BOTTOM_INSET,
             gap: spacing.md,
+            paddingBottom: TAB_SCROLL_BOTTOM_INSET,
+            paddingTop: spacing.sm,
             flexGrow: 1,
           }}
           refreshControl={
@@ -200,29 +195,59 @@ export function FeedScreen() {
                   await load('replace');
                 })();
               }}
-              tintColor={dashboardColors.text}
+              tintColor={theme.colors.text}
             />
+          }
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View style={styles.headerBlock}>
+              <Text style={styles.guideline}>{learnInPublic.guideline}</Text>
+              <FeedComposeCard
+                availableTags={myTags}
+                onOpenFilter={() => {
+                  if (myTags.length === 0) {
+                    setError(learnInPublic.needHobbyToFilter);
+                    return;
+                  }
+                  setFilterOpen(true);
+                }}
+                onPosted={() => {
+                  setRefreshing(true);
+                  void load('replace');
+                }}
+                onNeedUsername={() => {
+                  if (!username) {
+                    router.push('/(app)/claim-username' as never);
+                  }
+                }}
+                onNeedHobby={() => router.push('/(app)/roadmap-creation' as never)}
+              />
+              {filter.kind === 'tag' ? (
+                <View style={styles.activeFilter}>
+                  <Text style={styles.activeFilterText}>Showing: {filter.tag.name}</Text>
+                  <Pressable onPress={() => applyFilter({ kind: 'all' })} hitSlop={8}>
+                    <Text style={styles.clearFilter}>Clear</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>{emptyTitle}</Text>
-              <Pressable
-                style={styles.emptyBtn}
-                onPress={() => {
-                  if (myTags.length === 0) {
-                    router.push('/(app)/roadmap-creation' as never);
-                    return;
-                  }
-                  onCompose();
-                }}
-              >
-                <Text style={styles.emptyBtnText}>{emptyCta}</Text>
-              </Pressable>
+              {emptyCta ? (
+                <Pressable
+                  style={styles.emptyBtn}
+                  onPress={() => router.push('/(app)/roadmap-creation' as never)}
+                >
+                  <Text style={styles.emptyBtnText}>{emptyCta}</Text>
+                </Pressable>
+              ) : null}
             </View>
           }
           ListFooterComponent={
             loadingMore ? (
-              <ActivityIndicator color={dashboardColors.text} style={{ marginVertical: 16 }} />
+              <ActivityIndicator color={theme.colors.text} style={{ marginVertical: 16 }} />
             ) : null
           }
           onEndReached={() => {
@@ -237,7 +262,7 @@ export function FeedScreen() {
               viewerTagNames={viewerTagNames}
               onTagPress={(tag) => {
                 if (!viewerTagNames.has(tag.name.toLowerCase())) {
-                  setError('Add this hobby to your profile to filter by it.');
+                  setError(learnInPublic.needHobbyToTag);
                   return;
                 }
                 applyFilter({ kind: 'tag', tag });
@@ -283,88 +308,90 @@ export function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  headerBlock: {
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  guideline: {
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: spacing.md + 4,
+  },
+  activeFilter: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.md + 4,
   },
-  eyebrow: {
-    color: dashboardColors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: dashboardColors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  composeBtn: {
-    alignItems: 'center',
-    backgroundColor: dashboardColors.cta,
-    borderRadius: 14,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  composeGlyph: {
-    color: dashboardColors.ctaText,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  filterRow: {
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  filterChip: {
-    backgroundColor: dashboardColors.surface,
-    borderColor: 'rgba(20,20,20,0.06)',
-    borderRadius: dashboardRadii.pill,
-    borderWidth: 1,
-    maxWidth: 160,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  filterChipActive: {
-    backgroundColor: '#F3EAF8',
-    borderColor: '#D4B8E8',
-  },
-  filterText: {
-    color: dashboardColors.text,
+  activeFilterText: {
+    color: theme.colors.textMuted,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  filterTextActive: {
-    color: dashboardColors.text,
+  clearFilter: {
+    color: theme.colors.navActive,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    overflow: 'hidden',
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  modalTitle: {
+    color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  optionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+  },
+  optionRowActive: {
+    backgroundColor: theme.colors.navActiveSoft,
+  },
+  optionText: {
+    color: theme.colors.text,
+    flex: 1,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
+  },
+  optionTextActive: {
+    fontFamily: fonts.bodyBold,
   },
   empty: {
     alignItems: 'center',
     gap: spacing.md,
-    marginTop: 64,
+    marginTop: 48,
     paddingHorizontal: spacing.lg,
   },
   emptyTitle: {
-    color: dashboardColors.textMuted,
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 16,
     textAlign: 'center',
   },
   emptyBtn: {
-    backgroundColor: dashboardColors.cta,
-    borderRadius: dashboardRadii.pill,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   emptyBtnText: {
-    color: dashboardColors.ctaText,
-    fontWeight: '800',
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
   },
   error: {
-    color: '#B42318',
+    color: theme.colors.danger,
+    fontFamily: fonts.body,
     padding: spacing.md,
     textAlign: 'center',
   },

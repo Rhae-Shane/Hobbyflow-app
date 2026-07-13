@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radii, spacing } from '@/constants/tokens';
+import { onboardingColors } from '@/constants/onboardingTokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 const HOBBIES = ['Chess', 'Guitar', 'Poker', 'Photography'] as const;
 
@@ -31,7 +33,7 @@ export function HobbyPicker({ value, onChange }: Props) {
       <TextInput
         style={styles.customInput}
         placeholder="Or type another hobby..."
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={onboardingColors.textMuted}
         value={customValue}
         onChangeText={onChange}
       />
@@ -49,30 +51,32 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
+    backgroundColor: theme.colors.surface,
+    borderColor: onboardingColors.border,
+    borderRadius: theme.radii.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: onboardingColors.chipSelectedBackground,
+    borderColor: onboardingColors.primaryBorder,
   },
   chipText: {
-    color: colors.text,
-    fontWeight: '600',
+    color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
   },
   chipTextSelected: {
-    color: '#FFFFFF',
+    color: onboardingColors.primaryText,
+    fontFamily: fonts.bodyBold,
   },
   customInput: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.card,
+    backgroundColor: theme.colors.surface,
+    borderColor: onboardingColors.border,
+    borderRadius: theme.radii.input,
     borderWidth: 1,
-    color: colors.text,
+    color: onboardingColors.text,
+    fontFamily: fonts.body,
     fontSize: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

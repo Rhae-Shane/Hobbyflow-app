@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
+import { HobbyBlockIllustration } from '@/components/home/HobbyBlockIllustration';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { theme } from '@/constants/theme';
 import { radii, spacing } from '@/constants/tokens';
@@ -10,13 +12,23 @@ type Props = {
   subtitle?: string;
   completedLessons: number;
   totalLessons: number;
-  coverUri?: string | null;
   mode: PathMode;
   onModeChange: (mode: PathMode) => void;
   onOpenSwitcher: () => void;
   onOpenMenu: () => void;
   onViewSessions?: () => void;
 };
+
+function MenuIcon({ color = onboardingColors.text }: { color?: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Rect x="5" y="5" width="6" height="6" rx="1.5" stroke={color} strokeWidth={1.8} />
+      <Rect x="13" y="5" width="6" height="6" rx="1.5" stroke={color} strokeWidth={1.8} />
+      <Rect x="5" y="13" width="6" height="6" rx="1.5" stroke={color} strokeWidth={1.8} />
+      <Rect x="13" y="13" width="6" height="6" rx="1.5" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
 
 export function RoadmapPathCard({
   title,
@@ -40,7 +52,7 @@ export function RoadmapPathCard({
           accessibilityLabel="Roadmap menu"
           testID="roadmap-menu"
         >
-          <Text style={styles.stackIcon}>▤</Text>
+          <MenuIcon />
         </Pressable>
         <View style={styles.modeRow}>
           <Pressable
@@ -67,9 +79,7 @@ export function RoadmapPathCard({
       </View>
 
       <View style={styles.heroArt} pointerEvents="none">
-        <View style={styles.heroRing}>
-          <Text style={styles.heroGlyph}>◎</Text>
-        </View>
+        <HobbyBlockIllustration title={title} width={120} height={120} />
       </View>
 
       <Pressable onPress={onOpenSwitcher} accessibilityLabel="Switch roadmap">
@@ -100,14 +110,14 @@ export function RoadmapPathCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.navActiveSoft,
-    borderRadius: 28,
+    borderRadius: theme.radii.card,
     gap: spacing.sm,
     overflow: 'hidden',
     padding: spacing.lg,
     shadowColor: theme.shadow.color,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: theme.shadow.offsetY },
+    shadowOpacity: theme.shadow.opacity,
+    shadowRadius: theme.shadow.radius,
   },
   topRow: {
     alignItems: 'center',
@@ -121,11 +131,6 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     width: 36,
-  },
-  stackIcon: {
-    color: onboardingColors.text,
-    fontSize: 16,
-    fontWeight: '800',
   },
   modeRow: {
     flexDirection: 'row',
@@ -152,20 +157,7 @@ const styles = StyleSheet.create({
   heroArt: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.sm,
-  },
-  heroRing: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderRadius: 48,
-    height: 88,
-    justifyContent: 'center',
-    width: 88,
-  },
-  heroGlyph: {
-    color: onboardingColors.text,
-    fontSize: 36,
-    fontWeight: '300',
+    paddingVertical: spacing.xs,
   },
   title: {
     color: onboardingColors.text,

@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LeagueBadge } from '@/components/profile/LeagueBadge';
+import { KeyboardAware } from '@/components/ui/KeyboardAware';
 import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
+import { learnInPublic } from '@/constants/learnInPublic';
 import { spacing } from '@/constants/tokens';
 import { listFeed } from '@/services/posts';
 import { searchHobbyTags, searchProfiles } from '@/services/profileSearch';
@@ -113,26 +115,29 @@ export function ProfileSearchScreen() {
     section === 'people' ? people : section === 'hobbies' ? hobbies : posts;
 
   return (
-    <View style={styles.root}>
+    <KeyboardAware style={styles.root}>
+      <Text style={styles.intro}>{learnInPublic.guideline}</Text>
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.input}
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
-          placeholder="Search people or hobbies"
+          placeholder={learnInPublic.searchPlaceholder}
           placeholderTextColor={dashboardColors.textMuted}
           value={query}
           onChangeText={onChangeQuery}
+          numberOfLines={1}
+          returnKeyType="search"
         />
       </View>
 
       <View style={styles.tabs}>
         {(
           [
-            ['people', `People (${people.length})`],
-            ['hobbies', `Hobbies (${hobbies.length})`],
-            ['posts', `Posts (${posts.length})`],
+            ['people', `${learnInPublic.partnersTab} (${people.length})`],
+            ['hobbies', `${learnInPublic.hobbiesTab} (${hobbies.length})`],
+            ['posts', `${learnInPublic.workTab} (${posts.length})`],
           ] as const
         ).map(([id, label]) => (
           <Pressable
@@ -231,7 +236,7 @@ export function ProfileSearchScreen() {
           );
         }}
       />
-    </View>
+    </KeyboardAware>
   );
 }
 
@@ -239,6 +244,14 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: dashboardColors.background,
     flex: 1,
+  },
+  intro: {
+    color: dashboardColors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
   },
   headerWrap: {
     paddingHorizontal: spacing.md,

@@ -5,7 +5,7 @@ type RoadmapUiState = {
   setSelectedRoadmapId: (id: string | null) => void;
 };
 
-/** Ephemeral UI selection for which roadmap the Roadmap tab shows. */
+/** Ephemeral UI selection for which roadmap the Explore Module tab shows. */
 export const useRoadmapUiStore = create<RoadmapUiState>((set) => ({
   selectedRoadmapId: null,
   setSelectedRoadmapId: (selectedRoadmapId) => set({ selectedRoadmapId }),

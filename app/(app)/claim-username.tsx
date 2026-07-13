@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
+import { KeyboardAware } from '@/components/ui/KeyboardAware';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
@@ -122,7 +123,7 @@ export default function ClaimUsernameScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <KeyboardAware style={styles.root}>
       <Text style={styles.brand}>HobbyFlow</Text>
       <Text style={styles.title}>Pick your username</Text>
       <Text style={styles.sub}>
@@ -162,7 +163,7 @@ export default function ClaimUsernameScreen() {
           <Text style={styles.ctaText}>CONTINUE</Text>
         )}
       </Pressable>
-    </View>
+    </KeyboardAware>
   );
 }
 

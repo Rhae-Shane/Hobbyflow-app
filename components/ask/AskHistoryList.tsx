@@ -1,9 +1,10 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AskEmptyHistoryLottie } from '@/components/ask/AskLottie';
 import { ChatBubbleIcon, TrashIcon } from '@/components/icons/AppIcons';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { radii, spacing } from '@/constants/tokens';
 import type { AskConversationSummary } from '@/services/askAnythingApi';
+import { showAlert } from '@/store/useAlertStore';
 
 type Props = {
   conversations: AskConversationSummary[];
@@ -69,7 +70,7 @@ export function AskHistoryList({
             <Pressable
               accessibilityLabel="Delete chat"
               onPress={() => {
-                Alert.alert('Delete chat?', 'This removes it from your history.', [
+                showAlert('Delete chat?', 'This removes it from your history.', [
                   { text: 'Cancel', style: 'cancel' },
                   {
                     text: 'Delete',

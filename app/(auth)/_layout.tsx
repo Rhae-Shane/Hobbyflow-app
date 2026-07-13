@@ -22,12 +22,10 @@ export default function AuthLayout() {
   const storeHydrated = usePlanStoreHydrated();
 
   const waitingForCloudPlan = Boolean(
-    user && hobbies.length === 0 && !plan && cloudHydrationStatus === 'loading',
+    user && hobbies.length === 0 && !plan && cloudHydrationStatus !== 'done',
   );
-  const waitingForPreferences = Boolean(
-    user && preferencesHydrationStatus === 'loading',
-  );
-  const waitingForUser = Boolean(user && userHydrationStatus === 'loading');
+  const waitingForPreferences = Boolean(user && preferencesHydrationStatus !== 'done');
+  const waitingForUser = Boolean(user && userHydrationStatus !== 'done');
 
   useEffect(() => {
     if (!user || !storeHydrated || waitingForCloudPlan || waitingForPreferences || waitingForUser) {
@@ -63,6 +61,7 @@ export default function AuthLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
     </Stack>
   );
 }

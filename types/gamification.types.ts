@@ -81,6 +81,16 @@ export type LeaderboardEntry = {
   isMe: boolean;
 };
 
+export type LeaderboardFilter =
+  | { kind: 'all' }
+  | { kind: 'category'; categoryId: number }
+  | { kind: 'tag'; hobbyId: number | null; name: string };
+
+export type LeaderboardCategoryOption = {
+  id: number;
+  name: string;
+};
+
 export type ProfileSearchHit = {
   userId: string;
   username: string;

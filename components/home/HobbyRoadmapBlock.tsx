@@ -21,6 +21,8 @@ type Props = {
   onPress: () => void;
   /** Fixed width for horizontal scroll; omit to flex-fill a 2-column row. */
   width?: number;
+  illustrationKey?: string | null;
+  illustrationUrl?: string | null;
 };
 
 function ProgressRing({ completed, total }: HobbyBlockProgress) {
@@ -69,6 +71,8 @@ export function HobbyRoadmapBlock({
   ctaLabel = 'OPEN',
   onPress,
   width,
+  illustrationKey,
+  illustrationUrl,
 }: Props) {
   const palette = hobbyBlockPalette[index % hobbyBlockPalette.length];
 
@@ -98,7 +102,14 @@ export function HobbyRoadmapBlock({
       </Text>
 
       <View style={styles.art}>
-        <HobbyBlockIllustration title={title} index={index} width={100} height={100} />
+        <HobbyBlockIllustration
+          title={title}
+          index={index}
+          illustrationKey={illustrationKey}
+          illustrationUrl={illustrationUrl}
+          width={100}
+          height={100}
+        />
       </View>
 
       <Pressable style={styles.cta} onPress={onPress}>

@@ -17,6 +17,8 @@ import {
 import { ChevronRightIcon } from '@/components/icons/AppIcons';
 import { dashboardColors } from '@/constants/dashboardTokens';
 import { spacing } from '@/constants/tokens';
+import type { HobbyNameCategoryMap } from '@/services/hobbyCatalog';
+import { resolveIllustrationForTitle } from '@/services/hobbyCatalog';
 import type { RoadmapRow } from '@/types/roadmap.types';
 
 type Props = {
@@ -25,6 +27,8 @@ type Props = {
   onOpen: (roadmapId: string) => void;
   onAddHobby: () => void;
   onSeeAll?: () => void;
+  /** Catalog name → category illustration (from Supabase). */
+  illustrationMap?: HobbyNameCategoryMap;
 };
 
 const GAP = 12;
@@ -37,6 +41,7 @@ export function HobbyRoadmapBlocks({
   onOpen,
   onAddHobby,
   onSeeAll,
+  illustrationMap = {},
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const scrollable = roadmaps.length > 2;
@@ -51,6 +56,8 @@ export function HobbyRoadmapBlocks({
     const remaining = contentSize.width - layoutMeasurement.width - contentOffset.x;
     setCanScrollMore(remaining > 8);
   }, []);
+
+  const artFor = (title: string) => resolveIllustrationForTitle(title, illustrationMap);
 
   return (
     <View style={styles.section}>
@@ -77,7 +84,9 @@ export function HobbyRoadmapBlocks({
             onContentSizeChange={() => setCanScrollMore(true)}
             scrollEventThrottle={16}
           >
-            {roadmaps.map((row, index) => (
+            {roadmaps.map((row, index) => {
+              const art = artFor(row.title);
+              return (
               <HobbyRoadmapBlock
                 key={row.id}
                 title={row.title}
@@ -86,8 +95,11 @@ export function HobbyRoadmapBlocks({
                 ctaLabel={row.status === 'preview' ? 'START' : 'OPEN'}
                 onPress={() => onOpen(row.id)}
                 width={cardWidth}
+                illustrationKey={art.illustrationKey}
+                illustrationUrl={art.illustrationUrl}
               />
-            ))}
+              );
+            })}
             <AddHobbyGhostBlock onPress={onAddHobby} width={cardWidth} />
           </ScrollView>
 
@@ -105,7 +117,9 @@ export function HobbyRoadmapBlocks({
             <AddHobbyGhostBlock onPress={onAddHobby} />
           ) : (
             <>
-              {roadmaps.map((row, index) => (
+              {roadmaps.map((row, index) => {
+                const art = artFor(row.title);
+                return (
                 <HobbyRoadmapBlock
                   key={row.id}
                   title={row.title}
@@ -113,8 +127,11 @@ export function HobbyRoadmapBlocks({
                   progress={progressById[row.id]}
                   ctaLabel={row.status === 'preview' ? 'START' : 'OPEN'}
                   onPress={() => onOpen(row.id)}
+                  illustrationKey={art.illustrationKey}
+                  illustrationUrl={art.illustrationUrl}
                 />
-              ))}
+                );
+              })}
               {roadmaps.length === 1 ? <AddHobbyGhostBlock onPress={onAddHobby} /> : null}
             </>
           )}
@@ -168,15 +185,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: dashboardColors.surface,
     borderColor: 'rgba(20,20,20,0.08)',
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    elevation: 4,
+    elevation: 1,
     height: 32,
     justifyContent: 'center',
     shadowColor: '#141414',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     width: 32,
   },
 });

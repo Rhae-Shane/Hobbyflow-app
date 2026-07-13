@@ -19,13 +19,12 @@ export default function Index() {
   const userHydrationStatus = useUserStore((s) => s.hydrationStatus);
   const storeHydrated = usePlanStoreHydrated();
 
+  // Wait until cloud hydration finishes (idle → loading → done), not only while loading.
   const waitingForCloudPlan = Boolean(
-    user && hobbies.length === 0 && !plan && cloudHydrationStatus === 'loading',
+    user && hobbies.length === 0 && !plan && cloudHydrationStatus !== 'done',
   );
-  const waitingForPreferences = Boolean(
-    user && preferencesHydrationStatus === 'loading',
-  );
-  const waitingForUser = Boolean(user && userHydrationStatus === 'loading');
+  const waitingForPreferences = Boolean(user && preferencesHydrationStatus !== 'done');
+  const waitingForUser = Boolean(user && userHydrationStatus !== 'done');
 
   if (
     authLoading ||

@@ -139,7 +139,7 @@ export function AskRoadmapPreview({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: askCompanionColors.surface,
-    borderRadius: 24,
+    borderRadius: 14,
     gap: spacing.sm,
     padding: spacing.md,
   },

@@ -1,18 +1,25 @@
+import { useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { RoadmapHomeScreen } from '@/components/roadmap/RoadmapHomeScreen';
+import { BootSpinner } from '@/components/BootSpinner';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { theme } from '@/constants/theme';
 import { spacing } from '@/constants/tokens';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
 
 /**
- * Learning-path detail — title/back come from fixed AppChromeHeader.
+ * Deep-link / legacy stack entry → Explore Module tab (keeps floating tab bar).
  */
 export default function RoadmapDetailRoute() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const setSelectedRoadmapId = useRoadmapUiStore((s) => s.setSelectedRoadmapId);
+
+  useEffect(() => {
+    if (!id) return;
+    setSelectedRoadmapId(id);
+    router.replace('/(app)/(tabs)/explore' as never);
+  }, [id, router, setSelectedRoadmapId]);
 
   if (!id) {
     return (
@@ -25,26 +32,10 @@ export default function RoadmapDetailRoute() {
     );
   }
 
-  return (
-    <View style={styles.root}>
-      <RoadmapHomeScreen
-        roadmapId={id}
-        onRoadmapChange={(nextId) => {
-          setSelectedRoadmapId(nextId);
-          router.replace(`/(app)/roadmap/${nextId}` as never);
-        }}
-        contentBottomInset={spacing.lg}
-        showBrandBar={false}
-      />
-    </View>
-  );
+  return <BootSpinner />;
 }
 
 const styles = StyleSheet.create({
-  root: {
-    backgroundColor: theme.colors.background,
-    flex: 1,
-  },
   fallback: {
     backgroundColor: theme.colors.background,
     flex: 1,

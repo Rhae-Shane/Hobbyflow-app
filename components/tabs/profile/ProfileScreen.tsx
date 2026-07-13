@@ -1,18 +1,16 @@
 import { ClaimUsernameSheet } from '@/components/profile/ClaimUsernameSheet';
 import { EditBioLinksSheet } from '@/components/profile/EditBioLinksSheet';
 import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
-import { LeagueBadge } from '@/components/profile/LeagueBadge';
-import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
 import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
-import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
 import { InlineError } from '@/components/ui/InlineError';
-import { dashboardColors, dashboardRadii, quickActionPalette } from '@/constants/dashboardTokens';
-import { spacing } from '@/constants/tokens';
+import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
+import { theme } from '@/constants/theme';
+import { learnInPublic } from '@/constants/learnInPublic';
+import { fonts, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
-import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { signOut } from '@/lib/auth';
 import { toAuthError } from '@/lib/errors';
-import { listFeed } from '@/services/posts';
+import { findLeague, profileShareMessage } from '@/lib/gamification/leagues';
 import { fetchOwnHobbyTags } from '@/services/profileSearch';
 import { fetchSocialLinks } from '@/services/socialLinks';
 import { useGamificationStore } from '@/store/useGamificationStore';
@@ -20,22 +18,62 @@ import { usePactStore } from '@/store/usePactStore';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useUserStore } from '@/store/useUserStore';
-import type { FeedPost, SocialLink } from '@/types/post.types';
 import type { PublicProfile } from '@/types/gamification.types';
+import type { SocialLink } from '@/types/post.types';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState, type ReactNode } from 'react';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-const PROGRESS_LINKS = [
-  { id: 'streak', label: 'My Streak', icon: '🔥', href: '/(app)/streak' },
-  { id: 'daily-tasks', label: 'Daily Tasks', icon: '✅', href: '/(app)/daily-tasks' },
-  { id: 'pact', label: 'The Pact', icon: '🤝', href: '/(app)/pact' },
-  { id: 'search', label: 'Find learners', icon: '🔍', href: '/(app)/search' },
-  { id: 'feed', label: 'Community Feed', icon: '◎', href: '/(app)/(tabs)/feed' },
-  { id: 'weekly', label: 'Weekly Report', icon: '📅', href: '/(app)/(tabs)/courses' },
-  { id: 'stats', label: 'Learning Stats', icon: '📊', href: '/(app)/(tabs)/courses' },
-  { id: 'courses', label: 'Roadmap Stats', icon: '📖', href: '/(app)/(tabs)/courses' },
-] as const;
+type MenuItem = {
+  id: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  danger?: boolean;
+};
+
+function MenuRow({
+  icon,
+  label,
+  onPress,
+  danger,
+  last,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  danger?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.menuRow, !last && styles.menuRowBorder]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Ionicons
+        name={icon}
+        size={22}
+        color={danger ? theme.colors.danger : theme.colors.text}
+      />
+      <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function MenuCard({ children }: { children: ReactNode }) {
+  return <View style={styles.menuCard}>{children}</View>;
+}
 
 export function ProfileScreen() {
   const router = useRouter();
@@ -48,9 +86,7 @@ export function ProfileScreen() {
   const bio = useUserStore((s) => s.bio);
   const clearGamification = useGamificationStore((s) => s.clearSession);
   const clearPact = usePactStore((s) => s.clearSession);
-  const currentStreak = useGamificationStore((s) => s.currentStreak);
   const rating = useGamificationStore((s) => s.rating);
-  const pactsFulfilled = useGamificationStore((s) => s.pactsFulfilled);
   const leagueId = useGamificationStore((s) => s.leagueId);
   const leagues = useGamificationStore((s) => s.leagues);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -58,28 +94,24 @@ export function ProfileScreen() {
   const [claimOpen, setClaimOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [links, setLinks] = useState<SocialLink[]>([]);
-  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [hobbyTags, setHobbyTags] = useState<PublicProfile['hobbyTags']>([]);
 
   const displayName = username
-    ? `@${username}`
+    ? username
     : user?.email?.split('@')[0] || profile?.hobby || 'Learner';
-  const initial = (username || displayName).replace('@', '').charAt(0).toUpperCase();
+  const initial = displayName.replace('@', '').charAt(0).toUpperCase();
   const league = findLeague(leagueId, leagues);
+  const needsUsername = !username;
+  const needsBioOrLinks = Boolean(username) && !bio && links.length === 0;
 
   useFocusEffect(
     useCallback(() => {
       if (!user?.id) return;
       let cancelled = false;
-      void Promise.all([
-        fetchSocialLinks(user.id),
-        listFeed({ limit: 30, authorId: user.id }),
-        fetchOwnHobbyTags(user.id),
-      ])
-        .then(([nextLinks, nextPosts, nextTags]) => {
+      void Promise.all([fetchSocialLinks(user.id), fetchOwnHobbyTags(user.id)])
+        .then(([nextLinks, nextTags]) => {
           if (cancelled) return;
           setLinks(nextLinks);
-          setPosts(nextPosts);
           setHobbyTags(nextTags);
         })
         .catch(() => {
@@ -132,299 +164,314 @@ export function ProfileScreen() {
       setClaimOpen(true);
       return;
     }
-    router.push('/(app)/post/compose' as never);
+    router.push('/(app)/(tabs)/feed' as never);
   };
 
+  const learningMenu: MenuItem[] = [
+    {
+      id: 'streak',
+      label: 'My Streak',
+      icon: 'flame-outline',
+      onPress: () => router.push('/(app)/streak' as never),
+    },
+    {
+      id: 'daily-tasks',
+      label: 'Daily Tasks',
+      icon: 'checkbox-outline',
+      onPress: () => router.push('/(app)/daily-tasks' as never),
+    },
+    {
+      id: 'pact',
+      label: 'The Pact',
+      icon: 'people-outline',
+      onPress: () => router.push('/(app)/pact' as never),
+    },
+    {
+      id: 'search',
+      label: learnInPublic.findPartners,
+      icon: 'search-outline',
+      onPress: () => router.push('/(app)/search' as never),
+    },
+    {
+      id: 'my-posts',
+      label: learnInPublic.myShowcase,
+      icon: 'grid-outline',
+      onPress: () => router.push('/(app)/my-posts' as never),
+    },
+    {
+      id: 'new-post',
+      label: learnInPublic.shareWork,
+      icon: 'add-circle-outline',
+      onPress: onNewPost,
+    },
+  ];
+
+  const accountMenu: MenuItem[] = [
+    {
+      id: 'share',
+      label: 'Share profile',
+      icon: 'share-outline',
+      onPress: () => void onShare(),
+    },
+    {
+      id: 'feedback',
+      label: 'Share Feedback',
+      icon: 'chatbubble-ellipses-outline',
+      onPress: () =>
+        void Linking.openURL(
+          'mailto:hello@hobbyflow.app?subject=HobbyFlow%20feedback',
+        ),
+    },
+    {
+      id: 'sign-out',
+      label: isSigningOut ? 'Signing out…' : 'Sign out',
+      icon: 'log-out-outline',
+      onPress: () => void handleSignOut(),
+      danger: true,
+    },
+  ];
+
   return (
-    <ScreenShell padded={false}>
-    <ScrollView
-      contentContainerStyle={{
-        paddingBottom: TAB_SCROLL_BOTTOM_INSET,
-        paddingHorizontal: spacing.md,
-        gap: spacing.md,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>HobbyFlow</Text>
+    <ScreenShell padded={false} style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
         </View>
-        <View style={styles.headerActions}>
-          <Pressable
-            style={styles.settingsBtn}
-            onPress={() => router.push('/(app)/search' as never)}
-            accessibilityLabel="Search profiles"
-          >
-            <Text style={styles.settingsGlyph}>🔍</Text>
-          </Pressable>
-          <Pressable
-            style={styles.settingsBtn}
-            onPress={() => router.push('/(app)/preferences' as never)}
-            accessibilityLabel="Settings"
-          >
-            <Text style={styles.settingsGlyph}>⚙</Text>
-          </Pressable>
-        </View>
-      </View>
 
-      {!username ? (
-        <Pressable style={styles.claimBanner} onPress={() => setClaimOpen(true)}>
-          <Text style={styles.claimTitle}>Claim your username</Text>
-          <Text style={styles.claimSub}>Needed to post, appear in search, and share your profile.</Text>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.card}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
-        <Text style={styles.name}>{displayName}</Text>
-        <LeagueBadge leagueId={leagueId} leagues={leagues} />
-        {bio ? <Text style={styles.bio}>{bio}</Text> : null}
-        <HobbyTagsRow tags={hobbyTags} />
-        <SocialLinksRow links={links} />
-        <Pressable
-          style={styles.statRow}
-          onPress={() => router.push('/(app)/streak' as never)}
-          accessibilityLabel="Open streak page"
-        >
-          <Text style={styles.statItem}>🔥 {currentStreak}d</Text>
-          <View style={styles.statDivider} />
-          <Text style={styles.statItem}>★ {rating}</Text>
-          <View style={styles.statDivider} />
-          <Text style={styles.statItem}>🤝 {pactsFulfilled} kept</Text>
-        </Pressable>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.editBtn} onPress={onEditProfile}>
-            <Text style={styles.editText}>EDIT</Text>
-          </Pressable>
-          <Pressable style={styles.editBtn} onPress={() => void onShare()}>
-            <Text style={styles.editText}>SHARE</Text>
-          </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={onNewPost}>
-            <Text style={styles.primaryBtnText}>NEW POST</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Posts</Text>
-      <ProfilePostsGrid posts={posts} emptyHint="Share your first hobby post." />
-
-      <Text style={styles.sectionTitle}>My Progress</Text>
-      <View style={styles.tileGrid}>
-        {PROGRESS_LINKS.map((item, index) => {
-          const palette = quickActionPalette[index % quickActionPalette.length];
-          return (
-            <Pressable
-              key={item.id}
-              style={[styles.tile, { backgroundColor: palette.background }]}
-              onPress={() => router.push(item.href as never)}
-            >
-              <View style={[styles.tileIcon, { backgroundColor: palette.iconBg }]}>
-                <Text style={styles.listIcon}>{item.icon}</Text>
-              </View>
-              <Text style={styles.tileLabel}>{item.label}</Text>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+          <View style={styles.identityBody}>
+            <Text style={styles.name} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {username ? <Text style={styles.handle}>@{username}</Text> : null}
+            <Pressable onPress={onEditProfile} hitSlop={8}>
+              <Text style={styles.editLink}>Edit Profile ›</Text>
             </Pressable>
-          );
-        })}
-      </View>
+          </View>
+        </View>
 
-      {signOutError ? <InlineError message={signOutError} /> : null}
-      <Pressable style={styles.signOut} onPress={handleSignOut} disabled={isSigningOut}>
-        <Text style={styles.signOutText}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
-      </Pressable>
+        {needsUsername ? (
+          <Pressable style={styles.ctaBanner} onPress={() => setClaimOpen(true)}>
+            <View style={styles.ctaCopy}>
+              <Text style={styles.ctaTitle}>Finish your profile!</Text>
+              <Text style={styles.ctaSub}>Claim a username to post & share</Text>
+              <Text style={styles.ctaAction}>Claim Username ›</Text>
+            </View>
+            <View style={styles.ctaArt}>
+              <Text style={styles.ctaArtGlyph}>✦</Text>
+            </View>
+          </Pressable>
+        ) : needsBioOrLinks ? (
+          <Pressable style={styles.ctaBanner} onPress={onEditProfile}>
+            <View style={styles.ctaCopy}>
+              <Text style={styles.ctaTitle}>Finish your profile!</Text>
+              <Text style={styles.ctaSub}>Add a bio & social links</Text>
+              <Text style={styles.ctaAction}>Add Details ›</Text>
+            </View>
+            <View style={styles.ctaArt}>
+              <Text style={styles.ctaArtGlyph}>✎</Text>
+            </View>
+          </Pressable>
+        ) : null}
 
-      {user?.id ? (
-        <>
-          <ClaimUsernameSheet
-            visible={claimOpen}
-            userId={user.id}
-            onClose={() => setClaimOpen(false)}
-            onClaimed={() => setClaimOpen(false)}
-          />
-          <EditBioLinksSheet
-            visible={editOpen}
-            userId={user.id}
-            onClose={() => setEditOpen(false)}
-            onSaved={setLinks}
-          />
-        </>
-      ) : null}
-    </ScrollView>
+        {(bio || hobbyTags.length > 0 || links.length > 0) && (
+          <View style={styles.aboutCard}>
+            {bio ? <Text style={styles.bio}>{bio}</Text> : null}
+            <HobbyTagsRow tags={hobbyTags} />
+            <SocialLinksRow links={links} />
+          </View>
+        )}
+
+        <MenuCard>
+          {learningMenu.map((item, index) => (
+            <MenuRow
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              onPress={item.onPress}
+              last={index === learningMenu.length - 1}
+            />
+          ))}
+        </MenuCard>
+
+        <MenuCard>
+          {accountMenu.map((item, index) => (
+            <MenuRow
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              onPress={item.onPress}
+              danger={item.danger}
+              last={index === accountMenu.length - 1}
+            />
+          ))}
+        </MenuCard>
+
+        {signOutError ? <InlineError message={signOutError} /> : null}
+
+        {user?.id ? (
+          <>
+            <ClaimUsernameSheet
+              visible={claimOpen}
+              userId={user.id}
+              onClose={() => setClaimOpen(false)}
+              onClaimed={() => setClaimOpen(false)}
+            />
+            <EditBioLinksSheet
+              visible={editOpen}
+              userId={user.id}
+              onClose={() => setEditOpen(false)}
+              onSaved={setLinks}
+            />
+          </>
+        ) : null}
+      </ScrollView>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    gap: spacing.md,
+    paddingBottom: TAB_SCROLL_BOTTOM_INSET + 48,
+    paddingHorizontal: spacing.md,
+  },
   header: {
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  eyebrow: {
-    color: dashboardColors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   title: {
-    color: dashboardColors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 20,
   },
-  settingsBtn: {
+  identityCard: {
     alignItems: 'center',
-    backgroundColor: dashboardColors.surface,
-    borderColor: 'rgba(20,20,20,0.06)',
-    borderRadius: 14,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  settingsGlyph: {
-    fontSize: 18,
-  },
-  claimBanner: {
-    backgroundColor: '#F3EAF8',
-    borderRadius: dashboardRadii.block,
-    gap: 4,
-    padding: spacing.md,
-  },
-  claimTitle: {
-    color: dashboardColors.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  claimSub: {
-    color: dashboardColors.textMuted,
-    fontSize: 13,
-  },
-  card: {
-    alignItems: 'center',
-    backgroundColor: dashboardColors.surface,
-    borderRadius: dashboardRadii.block,
-    gap: spacing.sm,
-    padding: spacing.lg,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 18,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#FFD6A8',
-    borderRadius: dashboardRadii.avatar,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radii.avatar,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
+  },
+  avatarText: {
+    color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 24,
+  },
+  identityBody: {
+    flex: 1,
+    gap: 2,
+  },
+  name: {
+    color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 20,
+  },
+  handle: {
+    color: theme.colors.textMuted,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+  },
+  editLink: {
+    color: theme.colors.textMuted,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  ctaBanner: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.navActive,
+    borderRadius: theme.radii.block,
+    flexDirection: 'row',
+    minHeight: 112,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  ctaCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  ctaTitle: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+    fontSize: 20,
+  },
+  ctaSub: {
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+  },
+  ctaAction: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    marginTop: 8,
+  },
+  ctaArt: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: theme.radii.tile,
     height: 72,
     justifyContent: 'center',
     width: 72,
   },
-  avatarText: {
-    color: dashboardColors.text,
+  ctaArtGlyph: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bodyBold,
     fontSize: 28,
-    fontWeight: '800',
   },
-  name: {
-    color: dashboardColors.text,
-    fontSize: 22,
-    fontWeight: '800',
+  aboutCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
+    gap: spacing.sm,
+    padding: spacing.md,
   },
   bio: {
-    color: dashboardColors.textMuted,
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center',
   },
-  statRow: {
+  menuCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.md,
+  },
+  menuRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
+    gap: 14,
+    paddingVertical: 16,
   },
-  statItem: {
-    color: dashboardColors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
+  menuRowBorder: {
+    borderBottomColor: theme.colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  statDivider: {
-    backgroundColor: 'rgba(20,20,20,0.1)',
-    height: 16,
-    width: 1,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  editBtn: {
-    backgroundColor: dashboardColors.background,
-    borderRadius: dashboardRadii.pill,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  editText: {
-    color: dashboardColors.text,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  primaryBtn: {
-    backgroundColor: dashboardColors.cta,
-    borderRadius: dashboardRadii.pill,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  primaryBtnText: {
-    color: dashboardColors.ctaText,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  sectionTitle: {
-    color: dashboardColors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: spacing.xs,
-  },
-  tileGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  tile: {
-    borderRadius: dashboardRadii.tile,
-    gap: 10,
-    padding: spacing.md,
-    width: '47.5%',
-  },
-  tileIcon: {
-    alignItems: 'center',
-    borderRadius: 14,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  listIcon: {
+  menuLabel: {
+    color: theme.colors.text,
+    flex: 1,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
   },
-  tileLabel: {
-    color: dashboardColors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  signOut: {
-    alignItems: 'center',
-    backgroundColor: dashboardColors.surface,
-    borderRadius: dashboardRadii.block,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  signOutText: {
-    color: dashboardColors.text,
-    fontWeight: '700',
+  menuLabelDanger: {
+    color: theme.colors.danger,
   },
 });

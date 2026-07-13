@@ -28,7 +28,7 @@ export function ProfilePostsGrid({ posts, emptyHint }: Props) {
           <Pressable
             key={post.id}
             style={styles.cell}
-            onPress={() => router.push('/(app)/(tabs)/feed' as never)}
+            onPress={() => router.push(`/(app)/post/${post.id}` as never)}
           >
             {cover?.kind === 'image' ? (
               <Image source={{ uri: cover.publicUrl }} style={styles.image} />

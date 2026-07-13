@@ -1,8 +1,10 @@
+import { StyleSheet, View } from 'react-native';
 import { normalizeAccessibilitySelection } from '@/constants/preferences';
 import { MultiSelectChips } from '@/components/onboarding/MultiSelectChips';
 import { OtherInput } from '@/components/onboarding/OtherInput';
 import type { PreferenceDataKey, WizardStep } from '@/lib/preferencesWizardSteps';
 import { getOptionsForDataKey } from '@/lib/preferencesWizardSteps';
+import { spacing } from '@/constants/tokens';
 
 type Props = {
   step: WizardStep & { dataKey: PreferenceDataKey };
@@ -35,13 +37,21 @@ export function PreferenceDataStep({
         }
         onChange={(value) => onSelectionChange(dataKey, value)}
       />
-      <OtherInput
-        placeholder={step.otherPlaceholder ?? 'Other (optional)'}
-        showAddButton={step.showOtherAddButton}
-        value={otherText}
-        onAdd={onAddOther}
-        onChange={onOtherTextChange}
-      />
+      <View style={styles.other}>
+        <OtherInput
+          placeholder={step.otherPlaceholder ?? 'Other (optional)'}
+          showAddButton={step.showOtherAddButton}
+          value={otherText}
+          onAdd={onAddOther}
+          onChange={onOtherTextChange}
+        />
+      </View>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  other: {
+    paddingHorizontal: spacing.md,
+  },
+});

@@ -23,3 +23,5 @@ export const radii = {
   card: theme.radii.card,
   pill: theme.radii.pill,
 } as const;
+
+export { fonts, typeRoles as type } from '@/constants/typography';

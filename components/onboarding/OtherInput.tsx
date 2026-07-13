@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 type Props = {
   value: string;
@@ -49,12 +50,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   input: {
-    backgroundColor: onboardingColors.chipBackground,
+    backgroundColor: theme.colors.surface,
     borderColor: onboardingColors.border,
-    borderRadius: radii.card,
+    borderRadius: theme.radii.input,
     borderWidth: 1,
     color: onboardingColors.text,
     flex: 1,
+    fontFamily: fonts.body,
     fontSize: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -64,16 +66,16 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: radii.pill,
-    height: 40,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   addButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
     fontSize: 22,
-    fontWeight: '600',
     lineHeight: 24,
   },
 });

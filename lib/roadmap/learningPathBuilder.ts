@@ -1,7 +1,7 @@
 import type { RoadmapLessonRow, RoadmapNodeRow } from '@/types/roadmap.types';
 
 export type PathNodeKind = 'lesson' | 'applied' | 'section_review';
-export type PathNodeVisualState = 'current' | 'available' | 'locked' | 'completed';
+export type PathNodeVisualState = 'current' | 'available' | 'locked' | 'completed' | 'skipped';
 
 export type LearningPathSectionHeader = {
   kind: 'section_header';
@@ -10,6 +10,8 @@ export type LearningPathSectionHeader = {
   name: string;
   completedLessons: number;
   totalLessons: number;
+  /** Active lessons in section (excludes skipped). */
+  activeLessons: number;
 };
 
 export type LearningPathNode = {
@@ -40,13 +42,17 @@ function isAppliedLesson(node: RoadmapNodeRow): boolean {
   return node.metadata.isAppliedLesson === true;
 }
 
+function isSkipped(status: RoadmapLessonRow['status']): boolean {
+  return status === 'skipped';
+}
+
 function isIncomplete(status: RoadmapLessonRow['status']): boolean {
-  return status !== 'completed';
+  return status !== 'completed' && status !== 'skipped';
 }
 
 /**
  * Pick the current lesson: prefer in_progress, else lowest path_order among
- * incomplete regular (non-applied) lessons.
+ * incomplete regular (non-applied, non-skipped) lessons.
  */
 export function pickCurrentLessonId(
   lessons: Array<{ lessonRow: RoadmapLessonRow; node: RoadmapNodeRow }>,
@@ -68,6 +74,7 @@ function visualStateForLesson(
   status: RoadmapLessonRow['status'],
   currentId: string | null,
 ): PathNodeVisualState {
+  if (status === 'skipped') return 'skipped';
   if (status === 'completed') return 'completed';
   if (currentId === lessonId) return 'current';
   return 'available';
@@ -85,6 +92,7 @@ export type BuildLearningPathInput = {
 /**
  * Build Inspo-style learning path items from Spec 13 roadmap detail.
  * Order: section header → lessons (by path_order) → applied (if any) → locked section review.
+ * Section progress uses active lessons (total − skipped) as the denominator.
  */
 export function buildLearningPath(input: BuildLearningPathInput): LearningPathItem[] {
   const sections = input.nodes
@@ -120,7 +128,9 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
     const applied = inSection.filter((e) => isAppliedLesson(e.node));
 
     const completedLessons = regular.filter((e) => e.lessonRow.status === 'completed').length;
+    const skippedLessons = regular.filter((e) => isSkipped(e.lessonRow.status)).length;
     const totalLessons = regular.length;
+    const activeLessons = totalLessons - skippedLessons;
 
     items.push({
       kind: 'section_header',
@@ -128,7 +138,8 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
       sectionIndex: section.sectionIndex,
       name: section.name,
       completedLessons,
-      totalLessons,
+      totalLessons: activeLessons,
+      activeLessons,
     });
 
     for (const entry of regular) {

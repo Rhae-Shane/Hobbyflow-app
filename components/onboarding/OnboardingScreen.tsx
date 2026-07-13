@@ -9,8 +9,13 @@ import {
   View,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { PlantDoodle } from '@/components/home/categoryIllustrations';
+import { HobbyPicker } from '@/components/onboarding/HobbyPicker';
 import { InlineError } from '@/components/ui/InlineError';
 import { BootSpinner } from '@/components/BootSpinner';
+import { onboardingColors } from '@/constants/onboardingTokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 import { getStarterPlan } from '@/lib/starterPlans';
 import { buildPlanRequestWithContext } from '@/lib/planRequestWithContext';
 import { planRequestSchema } from '@/lib/validation/planRequest.schema';
@@ -22,9 +27,7 @@ import { useIsUserHydrated } from '@/hooks/useIsUserHydrated';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
-import { colors, radii, spacing } from '@/constants/tokens';
 import type { OnboardingProfile, Plan } from '@/types/plan.types';
-import { HobbyPicker } from '@/components/onboarding/HobbyPicker';
 
 const LEVELS: { label: string; value: Plan['level'] }[] = [
   { label: 'Beginner', value: 'beginner' },
@@ -215,6 +218,10 @@ export function OnboardingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.hero}>
+        <PlantDoodle width={140} height={140} color={onboardingColors.text} />
+      </View>
+
       <Text style={styles.title}>{isAddMode ? 'Add a hobby' : 'HobbyFlow'}</Text>
       <Text style={styles.subtitle}>
         {isAddMode
@@ -250,7 +257,7 @@ export function OnboardingScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g. Beat my friends casually"
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={onboardingColors.textMuted}
         value={goal}
         onChangeText={setGoal}
       />
@@ -278,11 +285,11 @@ export function OnboardingScreen() {
           <InlineError message={GENERATION_ERROR_MESSAGE} />
           <View style={styles.failureActions}>
             <Pressable
-              style={[styles.button, styles.buttonSecondary, isLoading && styles.buttonDisabled]}
+              style={[styles.buttonSecondary, isLoading && styles.buttonDisabled]}
               onPress={handleContinue}
               disabled={isLoading}
             >
-              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Try Again</Text>
+              <Text style={styles.buttonTextSecondary}>Try Again</Text>
             </Pressable>
             {starterAvailable ? (
               <Pressable style={styles.button} onPress={handleUseStarterPlan}>
@@ -300,7 +307,7 @@ export function OnboardingScreen() {
       >
         {isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={theme.colors.ctaText} />
             <Text style={styles.buttonText}>{LOADING_MESSAGES[loadingMessageIndex]}</Text>
           </View>
         ) : (
@@ -313,29 +320,40 @@ export function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: onboardingColors.background,
     flexGrow: 1,
     gap: spacing.md,
-    justifyContent: 'center',
-    padding: spacing.lg,
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  hero: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.lg,
   },
   title: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '700',
+    color: onboardingColors.text,
+    fontFamily: fonts.display,
+    fontSize: 28,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    color: colors.textMuted,
-    fontSize: 16,
+    color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
   },
   label: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
     marginTop: spacing.sm,
   },
   emptyHint: {
-    color: colors.textMuted,
+    color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 14,
   },
   row: {
@@ -344,30 +362,32 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
+    backgroundColor: theme.colors.surface,
+    borderColor: onboardingColors.border,
+    borderRadius: theme.radii.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: onboardingColors.chipSelectedBackground,
+    borderColor: onboardingColors.primaryBorder,
   },
   chipText: {
-    color: colors.text,
-    fontWeight: '600',
+    color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
   },
   chipTextSelected: {
-    color: '#FFFFFF',
+    color: onboardingColors.primaryText,
+    fontFamily: fonts.bodyBold,
   },
   input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.card,
+    backgroundColor: theme.colors.surface,
+    borderColor: onboardingColors.border,
+    borderRadius: theme.radii.input,
     borderWidth: 1,
-    color: colors.text,
+    color: onboardingColors.text,
+    fontFamily: fonts.body,
     fontSize: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -382,26 +402,32 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radii.card,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
     flexGrow: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
   },
   buttonSecondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderColor: onboardingColors.border,
+    borderRadius: theme.radii.pill,
     borderWidth: 1,
+    flexGrow: 1,
+    paddingVertical: 14,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
   },
   buttonTextSecondary: {
-    color: colors.text,
+    color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
   },
   loadingRow: {
     alignItems: 'center',

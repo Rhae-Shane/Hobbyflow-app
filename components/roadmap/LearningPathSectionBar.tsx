@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   bar: {
     alignItems: 'center',
     backgroundColor: theme.colors.background,
-    borderRadius: 22,
+    borderRadius: theme.radii.card,
     flexDirection: 'row',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,

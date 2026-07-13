@@ -1,3 +1,3 @@
-import { AuthScreen } from '@/components/auth/AuthScreen';
+import { GetStartedScreen } from '@/components/auth/GetStartedScreen';
 
-export default AuthScreen;
+export default GetStartedScreen;

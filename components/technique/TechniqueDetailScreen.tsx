@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { InlineError } from '@/components/ui/InlineError';
+import { KeyboardAware } from '@/components/ui/KeyboardAware';
 import { InAppResourceViewer } from '@/components/technique/InAppResourceViewer';
 import { ReplaceTechniqueSheet } from '@/components/technique/ReplaceTechniqueSheet';
 import { ErrorCodes, getKnownUserMessage } from '@/lib/errors';
@@ -130,8 +131,12 @@ export function TechniqueDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <KeyboardAware style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <Pressable onPress={() => router.back()}>
           <Text style={styles.backLink}>← Back</Text>
         </Pressable>
@@ -201,7 +206,7 @@ export function TechniqueDetailScreen() {
         title={technique.name}
         onClose={() => setResourceViewerUrl(null)}
       />
-    </View>
+    </KeyboardAware>
   );
 }
 

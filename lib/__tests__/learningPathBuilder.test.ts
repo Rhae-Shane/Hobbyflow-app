@@ -97,6 +97,7 @@ describe('learningPathBuilder', () => {
       name: 'Rhythm Basics',
       completedLessons: 0,
       totalLessons: 2,
+      activeLessons: 2,
     });
     expect(headers[1]).toMatchObject({
       name: 'Limb Coordination',
@@ -180,7 +181,53 @@ describe('learningPathBuilder', () => {
     const header = items.find(
       (i) => i.kind === 'section_header' && i.sectionId === sectionA,
     );
-    expect(header).toMatchObject({ totalLessons: 2, completedLessons: 0 });
+    expect(header).toMatchObject({ totalLessons: 2, completedLessons: 0, activeLessons: 2 });
+  });
+
+  it('excludes skipped lessons from current pick and active totals', () => {
+    const withSkipped: RoadmapLessonRow[] = [
+      pathRow(path1, lesson1, 0, 'skipped', 'Keeping Time'),
+      pathRow(path2, lesson2, 1, 'pending_content', 'Note Values'),
+      pathRow(pathApplied, applied1, 2, 'pending_content', 'Rhythm Basics'),
+      pathRow(path3, lesson3, 3, 'pending_content', 'Hand Techniques'),
+    ];
+    const items = buildLearningPath({ nodes, lessons: withSkipped });
+    const header = items.find(
+      (i) => i.kind === 'section_header' && i.sectionId === sectionA,
+    );
+    expect(header).toMatchObject({
+      totalLessons: 1,
+      activeLessons: 1,
+      completedLessons: 0,
+    });
+
+    const skippedNode = items.find(
+      (i) => i.kind === 'path_node' && i.label === 'Keeping Time',
+    );
+    expect(skippedNode).toMatchObject({ visualState: 'skipped' });
+
+    const current = items.find((i) => i.kind === 'path_node' && i.visualState === 'current');
+    expect(current).toMatchObject({ label: 'Note Values' });
+  });
+
+  it('pickCurrentLessonId ignores skipped lessons', () => {
+    const entries = [
+      {
+        node: lesson(lesson1, 'Keeping Time', sectionA, {
+          lessonIndex: 0,
+          sectionIndex: 0,
+        }),
+        lessonRow: pathRow(path1, lesson1, 0, 'skipped', 'Keeping Time'),
+      },
+      {
+        node: lesson(lesson2, 'Note Values', sectionA, {
+          lessonIndex: 1,
+          sectionIndex: 0,
+        }),
+        lessonRow: pathRow(path2, lesson2, 1, 'pending_content', 'Note Values'),
+      },
+    ];
+    expect(pickCurrentLessonId(entries)).toBe(path2);
   });
 
   it('pickCurrentLessonId ignores applied lessons', () => {

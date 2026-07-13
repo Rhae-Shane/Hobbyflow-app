@@ -10,7 +10,7 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 
 /**
  * App stack (outside floating tabs):
- * - preferences, roadmap-creation, onboarding → first-run only
+ * - welcome, preferences, roadmap-creation, onboarding → first-run only
  * - roadmap-preview/[id] → after CREATE ROADMAP
  * - roadmap/[id] → learning-path detail (from Home / Courses)
  * - (tabs) → Home | Feed | Generation (Profile via home avatar; Courses via See all)
@@ -19,6 +19,7 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 function isFirstRunOnlySegment(segments: string[]): boolean {
   const leaf = String(segments[segments.length - 1] ?? '');
   return (
+    leaf === 'welcome' ||
     leaf === 'preferences' ||
     leaf === 'roadmap-creation' ||
     leaf === 'onboarding' ||
@@ -28,7 +29,7 @@ function isFirstRunOnlySegment(segments: string[]): boolean {
 
 function shouldShowChrome(pathname: string, segments: string[]): boolean {
   if (isFirstRunOnlySegment(segments)) return false;
-  if (pathname.includes('/post/compose')) return false;
+  // Feed uses the shared chrome header.
   return true;
 }
 
@@ -80,6 +81,7 @@ export default function AppLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="claim-username" />
+          <Stack.Screen name="welcome" />
           <Stack.Screen name="preferences" />
           <Stack.Screen name="roadmap-creation" />
           <Stack.Screen name="onboarding" />
@@ -87,11 +89,13 @@ export default function AppLayout() {
           <Stack.Screen name="roadmap/[id]" />
           <Stack.Screen name="technique/[techniqueId]" />
           <Stack.Screen name="streak" />
+          <Stack.Screen name="leaderboard" />
           <Stack.Screen name="daily-tasks" />
+          <Stack.Screen name="my-posts" />
           <Stack.Screen name="pact" />
           <Stack.Screen name="search" />
           <Stack.Screen name="u/[username]" />
-          <Stack.Screen name="post/compose" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="post/[id]" />
         </Stack>
       </View>
     </View>

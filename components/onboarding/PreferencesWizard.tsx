@@ -6,15 +6,35 @@ import {
   Text,
   View,
 } from 'react-native';
+import {
+  MeditatingDoodle,
+  PlantDoodle,
+  ReadingDoodle,
+  SittingDoodle,
+} from '@/components/home/categoryIllustrations';
 import { NotedSummaryStep } from '@/components/onboarding/NotedSummaryStep';
+import { OnboardingProgressHeader } from '@/components/onboarding/OnboardingProgressHeader';
+import { OnboardingPromptBubble } from '@/components/onboarding/OnboardingPromptBubble';
 import { OtherInput } from '@/components/onboarding/OtherInput';
 import { PreferenceDataStep } from '@/components/onboarding/PreferenceDataStep';
 import { SingleSelectList } from '@/components/onboarding/SingleSelectList';
 import { InlineError } from '@/components/ui/InlineError';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
-import { getOptionsForSingleKey, isPresetSingleValue } from '@/lib/preferencesWizardSteps';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
+import {
+  getOptionsForSingleKey,
+  isPresetSingleValue,
+  WIZARD_STEPS,
+  type OnboardingIllustrationKey,
+} from '@/lib/preferencesWizardSteps';
 import { usePreferencesWizard } from '@/hooks/usePreferencesWizard';
+
+const ILLUSTRATIONS: Record<OnboardingIllustrationKey, typeof PlantDoodle> = {
+  plant: PlantDoodle,
+  reading: ReadingDoodle,
+  sitting: SittingDoodle,
+  meditating: MeditatingDoodle,
+};
 
 export function PreferencesWizard() {
   const {
@@ -40,20 +60,48 @@ export function PreferencesWizard() {
   if (!initialized || !step) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={onboardingColors.primary} size="large" />
+        <ActivityIndicator color={theme.colors.accentDeep} size="large" />
       </View>
     );
   }
 
+  const Illustration = step.illustration ? ILLUSTRATIONS[step.illustration] : null;
+  const isChoiceStep = step.kind === 'single' || step.kind === 'data';
+  const isInterstitial = step.kind === 'interstitial' || step.kind === 'summary';
+  const isLast = stepIndex === WIZARD_STEPS.length - 1;
+
   return (
     <View style={styles.screen}>
+      <OnboardingProgressHeader
+        stepIndex={stepIndex}
+        stepCount={WIZARD_STEPS.length}
+        showBack={stepIndex > 0}
+        onBack={handleBack}
+      />
+
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>{displayTitle}</Text>
-        {displaySubtitle ? <Text style={styles.subtitle}>{displaySubtitle}</Text> : null}
+        {isChoiceStep ? (
+          <OnboardingPromptBubble title={displayTitle} subtitle={displaySubtitle} />
+        ) : null}
+
+        {isInterstitial && Illustration ? (
+          <View style={styles.illustrationPanel}>
+            <Illustration width={160} height={160} color={theme.colors.text} />
+          </View>
+        ) : null}
+
+        {isInterstitial ? (
+          <>
+            <Text style={styles.interstitialTitle}>{displayTitle}</Text>
+            {displaySubtitle ? (
+              <Text style={styles.interstitialSubtitle}>{displaySubtitle}</Text>
+            ) : null}
+          </>
+        ) : null}
 
         {step.kind === 'data' && step.dataKey ? (
           <PreferenceDataStep
@@ -78,57 +126,45 @@ export function PreferencesWizard() {
               onChange={(value) => setSingleField(step.singleKey!, value)}
             />
             {step.allowOther ? (
-              <OtherInput
-                placeholder={step.otherPlaceholder ?? 'Other (optional)'}
-                value={
-                  draft[step.singleKey] &&
-                  !isPresetSingleValue(step.singleKey, draft[step.singleKey])
-                    ? draft[step.singleKey]
-                    : otherText
-                }
-                onChange={setOtherText}
-              />
+              <View style={styles.otherWrap}>
+                <OtherInput
+                  placeholder={step.otherPlaceholder ?? 'Other (optional)'}
+                  value={
+                    draft[step.singleKey] &&
+                    !isPresetSingleValue(step.singleKey, draft[step.singleKey])
+                      ? draft[step.singleKey]
+                      : otherText
+                  }
+                  onChange={setOtherText}
+                />
+              </View>
             ) : null}
           </>
         ) : null}
 
         {step.kind === 'summary' ? (
-          <NotedSummaryStep selectedStyles={draft.learningStyles} />
-        ) : null}
-
-        {step.kind === 'interstitial' && step.emoji ? (
-          <View style={styles.illustrationPlaceholder}>
-            <Text style={styles.illustrationEmoji}>{step.emoji}</Text>
+          <View style={styles.summaryWrap}>
+            <NotedSummaryStep selectedStyles={draft.learningStyles} />
           </View>
         ) : null}
 
-        {validationError ? <InlineError message={validationError} /> : null}
+        {validationError ? (
+          <View style={styles.errorWrap}>
+            <InlineError message={validationError} />
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
-        {stepIndex > 0 ? (
-          <Pressable
-            disabled={isSaving}
-            onPress={handleBack}
-            style={[styles.backButton, isSaving && styles.buttonDisabled]}
-          >
-            <Text style={styles.backButtonText}>Back</Text>
-          </Pressable>
-        ) : null}
-
         <Pressable
           disabled={!canContinue() || isSaving}
           onPress={handleContinue}
-          style={[
-            styles.continueButton,
-            (!canContinue() || isSaving) && styles.buttonDisabled,
-            stepIndex === 0 && styles.continueButtonFull,
-          ]}
+          style={[styles.nextButton, (!canContinue() || isSaving) && styles.buttonDisabled]}
         >
           {isSaving ? (
-            <ActivityIndicator color={onboardingColors.primaryText} />
+            <ActivityIndicator color={theme.colors.ctaText} />
           ) : (
-            <Text style={styles.continueText}>CONTINUE</Text>
+            <Text style={styles.nextText}>{isLast ? 'Finish' : 'Next'}</Text>
           )}
         </Pressable>
       </View>
@@ -138,12 +174,12 @@ export function PreferencesWizard() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: onboardingColors.background,
+    backgroundColor: theme.colors.background,
     flex: 1,
   },
   loading: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.background,
+    backgroundColor: theme.colors.background,
     flex: 1,
     justifyContent: 'center',
   },
@@ -151,69 +187,57 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.md,
     paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
   },
-  title: {
-    color: onboardingColors.text,
-    fontSize: 26,
-    fontWeight: '700',
-    lineHeight: 34,
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: onboardingColors.textMuted,
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  illustrationPlaceholder: {
+  illustrationPanel: {
     alignItems: 'center',
-    marginVertical: spacing.xl,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
+    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
-  illustrationEmoji: {
-    fontSize: 72,
+  interstitialTitle: {
+    color: theme.colors.text,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    letterSpacing: -0.3,
+    lineHeight: 32,
+    paddingHorizontal: spacing.lg,
+    textAlign: 'center',
+  },
+  interstitialSubtitle: {
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: spacing.lg,
+    textAlign: 'center',
+  },
+  otherWrap: {
+    paddingHorizontal: spacing.md,
+  },
+  summaryWrap: {
+    paddingHorizontal: spacing.md,
+  },
+  errorWrap: {
+    paddingHorizontal: spacing.md,
   },
   footer: {
-    borderTopColor: onboardingColors.border,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  backButton: {
-    alignItems: 'center',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minWidth: 88,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.sm,
   },
-  backButtonText: {
-    color: onboardingColors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  continueButton: {
+  nextButton: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: radii.card,
-    flex: 1,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.block,
     justifyContent: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: 18,
   },
-  continueButtonFull: {
-    flex: 1,
-  },
-  continueText: {
-    color: onboardingColors.primaryText,
+  nextText: {
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
     fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.45,

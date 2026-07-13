@@ -9,14 +9,18 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { InlineError } from '@/components/ui/InlineError';
 import { toAuthError } from '@/lib/errors';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/lib/auth';
-import { colors, radii, spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 type AuthMode = 'sign_in' | 'sign_up';
 
 export function AuthScreen() {
+  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('sign_in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,7 +78,19 @@ export function AuthScreen() {
       style={styles.container}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>HobbyFlow</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to get started"
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={styles.backRow}
+        >
+          <Text style={styles.backText}>Back</Text>
+        </Pressable>
+        <View style={styles.brandRow}>
+          <BrandLogo size={48} />
+          <Text style={styles.title}>HobbyFlow</Text>
+        </View>
         <Text style={styles.subtitle}>Sign in to save your roadmap across devices.</Text>
 
         <TextInput
@@ -82,7 +98,7 @@ export function AuthScreen() {
           autoComplete="email"
           keyboardType="email-address"
           placeholder="Email"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.colors.textMuted}
           style={styles.input}
           value={email}
           onChangeText={setEmail}
@@ -92,7 +108,7 @@ export function AuthScreen() {
           autoCapitalize="none"
           autoComplete="password"
           placeholder="Password"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.colors.textMuted}
           secureTextEntry
           style={styles.input}
           value={password}
@@ -143,77 +159,92 @@ export function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.card,
+    elevation: 2,
     gap: spacing.md,
     padding: spacing.lg,
+    shadowColor: theme.shadow.color,
+    shadowOffset: { width: 0, height: theme.shadow.offsetY },
+    shadowOpacity: theme.shadow.opacity,
+    shadowRadius: theme.shadow.radius,
+  },
+  backRow: {
+    alignSelf: 'flex-start',
+    marginBottom: -spacing.sm,
+  },
+  backText: {
+    color: theme.colors.textMuted,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+  },
+  brandRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   title: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '700',
+    color: theme.colors.text,
+    fontFamily: fonts.display,
+    fontSize: 34,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: colors.textMuted,
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 15,
+    lineHeight: 22,
     marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colors.text,
+    backgroundColor: '#F3F4F6',
+    borderRadius: theme.radii.input,
+    color: theme.colors.text,
+    fontFamily: fonts.body,
     fontSize: 16,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
   },
   googleButton: {
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
     paddingVertical: 14,
   },
   googleButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
   },
   switchMode: {
-    color: colors.primary,
+    color: theme.colors.navActive,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     textAlign: 'center',
   },
-  error: {
-    color: '#DC2626',
-    fontSize: 14,
-  },
   info: {
-    color: colors.success,
+    color: theme.colors.success,
+    fontFamily: fonts.body,
     fontSize: 14,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.45,
   },
 });

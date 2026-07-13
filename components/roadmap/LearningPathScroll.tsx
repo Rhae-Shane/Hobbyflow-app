@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LearningPathNodeView } from '@/components/roadmap/LearningPathNodeView';
 import { LearningPathSectionBar } from '@/components/roadmap/LearningPathSectionBar';
+import { KeyboardAware } from '@/components/ui/KeyboardAware';
 import { onboardingColors } from '@/constants/onboardingTokens';
 import { theme } from '@/constants/theme';
 import { radii, spacing } from '@/constants/tokens';
@@ -105,66 +106,70 @@ export function LearningPathScroll({
   };
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 + bottomInset }]}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      testID="learning-path-scroll"
-    >
-      <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>⌕</Text>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search"
-          placeholderTextColor={onboardingColors.textMuted}
-          style={styles.searchInput}
-          testID="session-search"
-          accessibilityLabel="Search sessions"
-        />
-      </View>
+    <KeyboardAware>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 + bottomInset }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        testID="learning-path-scroll"
+      >
+        <View style={styles.searchBar}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search"
+            placeholderTextColor={onboardingColors.textMuted}
+            style={styles.searchInput}
+            numberOfLines={1}
+            returnKeyType="search"
+            testID="session-search"
+            accessibilityLabel="Search sessions"
+          />
+        </View>
 
-      {header}
+        {header}
 
-      <View style={styles.list} testID="session-list">
-        {filteredGroups.map((group) => {
-          const expanded = expandedIds.has(group.header.sectionId);
-          return (
-            <View
-              key={group.header.sectionId}
-              style={styles.sectionBlock}
-              testID={`section-dropdown-${group.header.sectionId}`}
-            >
-              <LearningPathSectionBar
-                item={group.header}
-                expanded={expanded}
-                onToggle={toggleSection}
-                onJournalPress={onJournalPress}
-              />
-              {expanded ? (
-                <View style={styles.lessonList}>
-                  {group.lessons.map((item, index) => (
-                    <LearningPathNodeView
-                      key={item.id}
-                      item={item}
-                      sessionIndex={index + 1}
-                      onPress={onNodePress}
-                    />
-                  ))}
-                  {group.lessons.length === 0 ? (
-                    <Text style={styles.emptyNested}>No lessons in this section.</Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-          );
-        })}
-        {filteredGroups.length === 0 ? (
-          <Text style={styles.empty}>No sessions match your search.</Text>
-        ) : null}
-      </View>
-    </ScrollView>
+        <View style={styles.list} testID="session-list">
+          {filteredGroups.map((group) => {
+            const expanded = expandedIds.has(group.header.sectionId);
+            return (
+              <View
+                key={group.header.sectionId}
+                style={styles.sectionBlock}
+                testID={`section-dropdown-${group.header.sectionId}`}
+              >
+                <LearningPathSectionBar
+                  item={group.header}
+                  expanded={expanded}
+                  onToggle={toggleSection}
+                  onJournalPress={onJournalPress}
+                />
+                {expanded ? (
+                  <View style={styles.lessonList}>
+                    {group.lessons.map((item, index) => (
+                      <LearningPathNodeView
+                        key={item.id}
+                        item={item}
+                        sessionIndex={index + 1}
+                        onPress={onNodePress}
+                      />
+                    ))}
+                    {group.lessons.length === 0 ? (
+                      <Text style={styles.emptyNested}>No lessons in this section.</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+          {filteredGroups.length === 0 ? (
+            <Text style={styles.empty}>No sessions match your search.</Text>
+          ) : null}
+        </View>
+      </ScrollView>
+    </KeyboardAware>
   );
 }
 
@@ -178,21 +183,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: radii.pill,
     flexDirection: 'row',
-    gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-  },
-  searchIcon: {
-    color: onboardingColors.textMuted,
-    fontSize: 18,
-    fontWeight: '600',
+    paddingVertical: 4,
   },
   searchInput: {
     color: onboardingColors.text,
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    padding: 0,
+    paddingVertical: 10,
   },
   list: {
     gap: spacing.sm,

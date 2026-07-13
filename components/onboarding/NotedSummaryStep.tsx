@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { LEARNING_STYLE_SUPPORT } from '@/constants/preferences';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 type Props = {
   selectedStyles: string[];
@@ -25,7 +26,7 @@ function BulletList({
         const isSelected = selectedStyles.includes(item);
         return (
           <View key={item} style={styles.bulletRow}>
-            <Text style={styles.bullet}>•</Text>
+            <View style={[styles.dot, highlightSelected && isSelected && styles.dotSelected]} />
             <Text
               style={[
                 styles.bulletText,
@@ -33,7 +34,7 @@ function BulletList({
               ]}
             >
               {item}
-              {highlightSelected && isSelected ? ' ✓' : ''}
+              {highlightSelected && isSelected ? ' · selected' : ''}
             </Text>
           </View>
         );
@@ -69,7 +70,10 @@ export function NotedSummaryStep({ selectedStyles }: Props) {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.block,
     gap: spacing.lg,
+    padding: spacing.md,
     width: '100%',
   },
   section: {
@@ -77,8 +81,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   bulletRow: {
@@ -86,19 +90,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  bullet: {
-    color: onboardingColors.primary,
-    fontSize: 16,
-    lineHeight: 22,
+  dot: {
+    backgroundColor: onboardingColors.border,
+    borderRadius: 4,
+    height: 8,
+    marginTop: 7,
+    width: 8,
+  },
+  dotSelected: {
+    backgroundColor: theme.colors.accentDeep,
   },
   bulletText: {
     color: onboardingColors.textMuted,
     flex: 1,
+    fontFamily: fonts.body,
     fontSize: 15,
     lineHeight: 22,
   },
   bulletTextSelected: {
     color: onboardingColors.text,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
   },
 });

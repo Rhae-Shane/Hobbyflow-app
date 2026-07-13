@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { fonts, radii, spacing } from '@/constants/tokens';
 import { normalizeUsername, validateUsernameFormat } from '@/lib/gamification/constants';
 import { checkUsernameAvailable, claimUsername } from '@/services/profileSearch';
 import { useUserStore } from '@/store/useUserStore';
@@ -80,74 +80,71 @@ export function ClaimUsernameSheet({ visible, userId, onClose, onClaimed }: Prop
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Claim your username</Text>
-          <Text style={styles.sub}>This is how others find and share your profile.</Text>
-          <TextInput
-            style={styles.input}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="@username"
-            placeholderTextColor={onboardingColors.textMuted}
-            value={value}
-            onChangeText={setValue}
-            maxLength={21}
-          />
-          <Text
-            style={[
-              styles.hint,
-              available === true && styles.hintOk,
-              available === false && styles.hintBad,
-            ]}
-          >
-            {checking ? 'Checking…' : hint ?? ' '}
-          </Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Pressable
-            style={[styles.cta, (!available || saving) && styles.ctaDisabled]}
-            disabled={!available || saving}
-            onPress={() => {
-              void onSubmit();
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator color={onboardingColors.primaryText} />
-            ) : (
-              <Text style={styles.ctaText}>CLAIM</Text>
-            )}
-          </Pressable>
-          <Pressable onPress={onClose}>
-            <Text style={styles.cancel}>Cancel</Text>
-          </Pressable>
+    <BottomSheetOrModal
+      visible={visible}
+      onClose={onClose}
+      sheetStyle={styles.sheet}
+    >
+      <View style={styles.content}>
+        <Text style={styles.title}>Claim your username</Text>
+        <Text style={styles.sub}>This is how others find and share your profile.</Text>
+        <TextInput
+          style={styles.input}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="@username"
+          placeholderTextColor={onboardingColors.textMuted}
+          value={value}
+          onChangeText={setValue}
+          maxLength={21}
+          numberOfLines={1}
+        />
+        <Text
+          style={[
+            styles.hint,
+            available === true && styles.hintOk,
+            available === false && styles.hintBad,
+          ]}
+        >
+          {checking ? 'Checking…' : hint ?? ' '}
+        </Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable
+          style={[styles.cta, (!available || saving) && styles.ctaDisabled]}
+          disabled={!available || saving}
+          onPress={() => {
+            void onSubmit();
+          }}
+        >
+          {saving ? (
+            <ActivityIndicator color={onboardingColors.primaryText} />
+          ) : (
+            <Text style={styles.ctaText}>CLAIM</Text>
+          )}
         </Pressable>
-      </Pressable>
-    </Modal>
+        <Pressable onPress={onClose}>
+          <Text style={styles.cancel}>Cancel</Text>
+        </Pressable>
+      </View>
+    </BottomSheetOrModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
   sheet: {
     backgroundColor: onboardingColors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  },
+  content: {
     gap: spacing.sm,
-    padding: spacing.lg,
-    paddingBottom: 36,
   },
   title: {
     color: onboardingColors.text,
+    fontFamily: fonts.display,
     fontSize: 22,
-    fontWeight: '800',
   },
   sub: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 14,
     marginBottom: spacing.sm,
   },
@@ -157,13 +154,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: 1,
     color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    fontWeight: '600',
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
   },
   hint: {
     color: onboardingColors.textMuted,
+    fontFamily: fonts.body,
     fontSize: 13,
     minHeight: 18,
   },
@@ -175,6 +173,7 @@ const styles = StyleSheet.create({
   },
   error: {
     color: '#E11D48',
+    fontFamily: fonts.body,
     fontSize: 13,
   },
   cta: {
@@ -189,11 +188,11 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     color: onboardingColors.primaryText,
-    fontWeight: '800',
+    fontFamily: fonts.bodyBold,
   },
   cancel: {
     color: onboardingColors.textMuted,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
     marginTop: spacing.sm,
     textAlign: 'center',
   },

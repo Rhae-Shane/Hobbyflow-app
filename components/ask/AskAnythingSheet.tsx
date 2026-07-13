@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AskChatTranscript } from '@/components/ask/AskChatTranscript';
@@ -19,12 +18,13 @@ import { AskRoadmapPreview } from '@/components/ask/AskRoadmapPreview';
 import { AskSheetTopBar } from '@/components/ask/AskSheetTopBar';
 import { AskSuggestionChips } from '@/components/ask/AskSuggestionChips';
 import { ASK_SUGGESTION_CHIPS } from '@/components/ask/askQuickActions';
+import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { SendIcon } from '@/components/icons/AppIcons';
 import {
   askCompanionColors,
   askCompanionRadii,
 } from '@/constants/askCompanionTokens';
-import { spacing } from '@/constants/tokens';
+import { fonts, spacing } from '@/constants/tokens';
 import { useAskAnythingChat } from '@/hooks/useAskAnythingChat';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
@@ -124,9 +124,16 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
   }));
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+    <BottomSheetOrModal
+      visible={visible}
+      onClose={onClose}
+      animationType="fade"
+      showHandle={false}
+      padded={false}
+      maxHeight="96%"
+      sheetStyle={styles.sheetShell}
+    >
+      <KeyboardAvoidingView behavior="padding" style={styles.keyboardWrap}>
         <Animated.View
           style={[
             styles.sheet,
@@ -237,31 +244,33 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
             <>
               <AskChatTranscript messages={chat.messages} sending={chat.sending} />
               {chat.error ? <Text style={styles.error}>{chat.error}</Text> : null}
-              <View style={styles.inputRow}>
-                <TextInput
-                  ref={inputRef}
-                  editable={!chat.sending}
-                  value={draft}
-                  onChangeText={setDraft}
-                  onSubmitEditing={() => {
-                    void handleSend();
-                  }}
-                  placeholder="Ask me anything.."
-                  placeholderTextColor={askCompanionColors.textMuted}
-                  style={styles.input}
-                  returnKeyType="send"
-                />
-                <AskPressable
-                  onPress={() => {
-                    void handleSend();
-                  }}
-                  disabled={!canSend}
-                  style={[styles.sendBtn, !canSend && styles.sendDisabled]}
-                  accessibilityLabel="Send"
-                >
-                  <SendIcon size={18} color="#FFFFFF" />
-                </AskPressable>
-              </View>
+              <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    ref={inputRef}
+                    editable={!chat.sending}
+                    value={draft}
+                    onChangeText={setDraft}
+                    onSubmitEditing={() => {
+                      void handleSend();
+                    }}
+                    placeholder="Ask me anything.."
+                    placeholderTextColor={askCompanionColors.textMuted}
+                    style={styles.input}
+                    returnKeyType="send"
+                  />
+                  <AskPressable
+                    onPress={() => {
+                      void handleSend();
+                    }}
+                    disabled={!canSend}
+                    style={[styles.sendBtn, !canSend && styles.sendDisabled]}
+                    accessibilityLabel="Send"
+                  >
+                    <SendIcon size={18} color="#FFFFFF" />
+                  </AskPressable>
+                </View>
+              </KeyboardStickyView>
             </>
           ) : null}
 
@@ -269,24 +278,24 @@ export function AskAnythingSheet({ visible, onClose, activeHobbyHint }: Props) {
             <Text style={styles.error}>{chat.error}</Text>
           ) : null}
         </Animated.View>
-      </View>
-    </Modal>
+      </KeyboardAvoidingView>
+    </BottomSheetOrModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: 'rgba(20, 20, 20, 0.35)',
-    flex: 1,
-    justifyContent: 'flex-end',
+  sheetShell: {
+    backgroundColor: askCompanionColors.background,
+    flexGrow: 1,
+    paddingBottom: 0,
+  },
+  keyboardWrap: {
+    flexGrow: 1,
+    minHeight: 480,
   },
   sheet: {
     backgroundColor: askCompanionColors.background,
-    borderTopLeftRadius: askCompanionRadii.sheet,
-    borderTopRightRadius: askCompanionRadii.sheet,
     flex: 1,
-    marginTop: 8,
-    maxHeight: '96%',
     paddingHorizontal: spacing.md,
   },
   newContent: {
@@ -300,16 +309,17 @@ const styles = StyleSheet.create({
   },
   metaLeft: {
     color: askCompanionColors.text,
+    fontFamily: fonts.bodyBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   metaRight: {
     color: askCompanionColors.textMuted,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 12,
-    fontWeight: '600',
   },
   error: {
     color: '#A14A3A',
+    fontFamily: fonts.body,
     fontSize: 13,
     marginTop: spacing.xs,
   },
@@ -328,13 +338,14 @@ const styles = StyleSheet.create({
   input: {
     color: askCompanionColors.text,
     flex: 1,
+    fontFamily: fonts.body,
     fontSize: 15,
     minHeight: 42,
   },
   sendBtn: {
     alignItems: 'center',
     backgroundColor: askCompanionColors.cta,
-    borderRadius: 22,
+    borderRadius: 14,
     height: 44,
     justifyContent: 'center',
     width: 44,

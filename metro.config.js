@@ -1,3 +1,4 @@
+const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -22,6 +23,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
 
   return context.resolveRequest(context, moduleName, platform);
+};
+
+// RN 0.81 / Metro package-exports can fail to resolve @sentry/* (import/require only).
+config.resolver.unstable_enablePackageExports = false;
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules ?? {}),
+  '@sentry/core': path.resolve(__dirname, 'node_modules/@sentry/core'),
+  '@sentry/react': path.resolve(__dirname, 'node_modules/@sentry/react'),
+  '@sentry/browser': path.resolve(__dirname, 'node_modules/@sentry/browser'),
 };
 
 module.exports = config;

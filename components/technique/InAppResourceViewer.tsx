@@ -1,9 +1,10 @@
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
+import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { shouldAllowResourceNavigation } from '@/utils/resourceNavigation';
-import { colors, radii, spacing } from '@/constants/tokens';
+import { colors, fonts, radii, spacing } from '@/constants/tokens';
 
 type Props = {
   visible: boolean;
@@ -14,7 +15,11 @@ type Props = {
 
 export function InAppResourceViewer({ visible, url, title = 'Resource', onClose }: Props) {
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <BottomSheetOrModal
+      visible={visible}
+      onClose={onClose}
+      presentation="fullscreen"
+    >
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>
@@ -44,7 +49,7 @@ export function InAppResourceViewer({ visible, url, title = 'Resource', onClose 
           )}
         />
       </SafeAreaView>
-    </Modal>
+    </BottomSheetOrModal>
   );
 }
 
@@ -66,8 +71,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    fontWeight: '600',
   },
   closeButton: {
     backgroundColor: colors.surface,
@@ -79,8 +84,8 @@ const styles = StyleSheet.create({
   },
   closeText: {
     color: colors.primary,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
   },
   webview: {
     flex: 1,

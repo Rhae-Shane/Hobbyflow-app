@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Modal, StyleSheet, Text } from 'react-native';
 import { theme } from '@/constants/theme';
+import { fonts } from '@/constants/tokens';
 
 const SEED_SIZE = 48;
 const EXPAND_MS = 900;
@@ -127,14 +128,14 @@ const styles = StyleSheet.create({
   },
   sealedTitle: {
     color: '#FFFFFF',
+    fontFamily: fonts.display,
     fontSize: 32,
-    fontWeight: '800',
     letterSpacing: -0.5,
   },
   sealedBody: {
     color: 'rgba(255,255,255,0.92)',
+    fontFamily: fonts.bodyMedium,
     fontSize: 16,
-    fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',
   },

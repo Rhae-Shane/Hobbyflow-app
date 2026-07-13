@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { createLogger } from '@/lib/logger';
 import { fetchUser } from '@/services/profile';
+import { completeOnboarding } from '@/services/user';
+import { usePlanStore } from '@/store/usePlanStore';
 import { useUserStore } from '@/store/useUserStore';
 
 const log = createLogger('hydrate-user');
@@ -9,6 +11,9 @@ export function useHydrateUser(userId: string | undefined, isAuthenticated: bool
   const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
   const setProfileFields = useUserStore((s) => s.setProfileFields);
   const setHydrationStatus = useUserStore((s) => s.setHydrationStatus);
+  const hobbies = usePlanStore((s) => s.hobbies);
+  const cloudHydrationStatus = usePlanStore((s) => s.cloudHydrationStatus);
+  const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
@@ -52,4 +57,37 @@ export function useHydrateUser(userId: string | undefined, isAuthenticated: bool
       cancelled = true;
     };
   }, [isAuthenticated, setCompletedOnboardingAt, setHydrationStatus, setProfileFields, userId]);
+
+  // Backfill cloud flag for users who already have hobbies but never got completed_onboarding_at.
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    if (cloudHydrationStatus !== 'done') return;
+    if (completedOnboardingAt) return;
+    if (hobbies.length === 0) return;
+
+    let cancelled = false;
+    void completeOnboarding(userId)
+      .then(() => {
+        if (cancelled) return;
+        setCompletedOnboardingAt(new Date().toISOString());
+        log.info('Backfilled completed_onboarding_at for existing hobby user', { userId });
+      })
+      .catch((err: unknown) => {
+        log.warn('Onboarding backfill failed', {
+          userId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    cloudHydrationStatus,
+    completedOnboardingAt,
+    hobbies.length,
+    isAuthenticated,
+    setCompletedOnboardingAt,
+    userId,
+  ]);
 }

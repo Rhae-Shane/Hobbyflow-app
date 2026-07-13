@@ -385,6 +385,73 @@ export async function softDeletePost(postId: string, authorId: string): Promise<
   }
 }
 
+export async function getPostById(postId: string): Promise<FeedPost | null> {
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
+  const { data: post, error } = await supabase
+    .from('posts')
+    .select(
+      'id, author_id, caption, created_at, like_count, comment_count, users!inner(username, full_name)',
+    )
+    .eq('id', postId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) {
+    log.error('getPostById failed', { error: error.message, postId });
+    throw new AppError(ErrorCodes.SYNC_FAILED, getKnownUserMessage(ErrorCodes.SYNC_FAILED), {
+      cause: error,
+    });
+  }
+  if (!post) return null;
+
+  const author = post.users as unknown as { username: string; full_name: string | null };
+  if (!author?.username) return null;
+
+  const [{ data: mediaRows }, { data: tagRows }, likeResult] = await Promise.all([
+    supabase
+      .from('post_media')
+      .select(
+        'id, kind, storage_path, public_url, mime_type, width, height, duration_ms, sort_order',
+      )
+      .eq('post_id', postId)
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('post_hobby_tags')
+      .select('hobby_id, name, source')
+      .eq('post_id', postId)
+      .order('name', { ascending: true }),
+    viewer?.id
+      ? supabase
+          .from('post_likes')
+          .select('post_id')
+          .eq('post_id', postId)
+          .eq('user_id', viewer.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  return mapFeedRow({
+    id: post.id,
+    author_id: post.author_id,
+    caption: post.caption,
+    created_at: post.created_at,
+    username: author.username,
+    display_name: author.full_name?.trim() || author.username,
+    media: mediaRows ?? [],
+    tags: (tagRows ?? []).map((t) => ({
+      hobbyId: t.hobby_id,
+      name: t.name,
+      source: t.source,
+    })),
+    like_count: post.like_count ?? 0,
+    comment_count: post.comment_count ?? 0,
+    liked_by_me: Boolean(likeResult.data),
+  });
+}
+
 export async function togglePostLike(
   postId: string,
 ): Promise<{ liked: boolean; likeCount: number }> {

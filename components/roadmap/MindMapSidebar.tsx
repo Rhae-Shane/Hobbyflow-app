@@ -19,6 +19,7 @@ type Props = {
 
 function statusLabel(status: LinkedLessonItem['status']): string {
   if (status === 'completed') return 'Completed';
+  if (status === 'skipped') return 'Skipped';
   if (status === 'in_progress') return 'In progress';
   if (status === 'ready') return 'Ready';
   if (status === 'generating') return 'Generating';

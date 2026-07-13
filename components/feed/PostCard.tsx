@@ -1,16 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
+import calendar from 'dayjs/plugin/calendar';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { MediaCarousel } from '@/components/feed/MediaCarousel';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { spacing } from '@/constants/tokens';
 import { togglePostLike } from '@/services/posts';
+import { showAlert } from '@/store/useAlertStore';
 import type { FeedPost, PostHobbyTag } from '@/types/post.types';
 import { hapticLight, hapticWarning } from '@/utils/haptics';
 
-dayjs.extend(relativeTime);
+dayjs.extend(calendar);
+
+const CAPTION_PREVIEW = 140;
+const MEDIA_RADIUS = 20;
 
 type Props = {
   post: FeedPost;
@@ -22,6 +27,22 @@ type Props = {
   onLikeChange?: (postId: string, liked: boolean, likeCount: number) => void;
   onOpenComments?: (post: FeedPost) => void;
 };
+
+function formatCount(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 10_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  if (n < 1_000_000) return `${Math.round(n / 1000)}K`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
+function formatPostTime(iso: string): string {
+  return dayjs(iso).calendar(null, {
+    sameDay: '[Today,] h:mm A',
+    lastDay: '[Yesterday,] h:mm A',
+    lastWeek: 'ddd, h:mm A',
+    sameElse: 'MMM D, h:mm A',
+  });
+}
 
 export function PostCard({
   post,
@@ -38,10 +59,19 @@ export function PostCard({
   const visibleTags = post.tags.slice(0, 4);
   const extra = post.tags.length - visibleTags.length;
   const [liking, setLiking] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
   const likingRef = useRef(false);
 
+  const displayName = post.displayName?.trim() || post.username;
+  const initial = displayName.replace('@', '').charAt(0).toUpperCase();
+  const caption = post.caption?.trim() ?? '';
+  const needsMore = caption.length > CAPTION_PREVIEW;
+  const shownCaption =
+    !needsMore || expanded ? caption : `${caption.slice(0, CAPTION_PREVIEW).trimEnd()}…`;
+
   const confirmDelete = () => {
-    Alert.alert('Delete post?', 'This removes it from the feed for everyone.', [
+    showAlert('Delete post?', 'This removes it from the feed for everyone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -83,29 +113,72 @@ export function PostCard({
     })();
   };
 
+  const onShare = () => {
+    void Share.share({
+      message: caption
+        ? `${caption}\n\n— @${post.username} on HobbyFlow`
+        : `Check out @${post.username}'s post on HobbyFlow`,
+    });
+  };
+
+  const openMenu = () => {
+    if (isOwn) {
+      confirmDelete();
+      return;
+    }
+    showAlert(`@${post.username}`, undefined, [
+      { text: 'Share', onPress: onShare },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Pressable
-          style={styles.author}
+          style={styles.avatar}
+          onPress={() => router.push(`/(app)/u/${post.username}` as never)}
+          accessibilityLabel={`Open @${post.username}`}
+        >
+          <Text style={styles.avatarText}>{initial}</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.meta}
           onPress={() => router.push(`/(app)/u/${post.username}` as never)}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{post.username.charAt(0).toUpperCase()}</Text>
-          </View>
-          <View>
-            <Text style={styles.handle}>@{post.username}</Text>
-            <Text style={styles.time}>{dayjs(post.createdAt).fromNow()}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <View style={styles.subMeta}>
+            <Text style={styles.time}>{formatPostTime(post.createdAt)}</Text>
+            <Ionicons name="globe-outline" size={12} color={theme.colors.textMuted} />
           </View>
         </Pressable>
-        {isOwn ? (
-          <Pressable onPress={confirmDelete} accessibilityLabel="Delete post">
-            <Text style={styles.more}>···</Text>
-          </Pressable>
-        ) : null}
+
+        <Pressable
+          onPress={openMenu}
+          accessibilityLabel="Post options"
+          hitSlop={10}
+          style={styles.menuBtn}
+        >
+          <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textMuted} />
+        </Pressable>
       </View>
 
-      {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
+      {caption ? (
+        <View style={styles.captionBlock}>
+          <Text style={styles.caption}>
+            {shownCaption}
+            {needsMore && !expanded ? (
+              <Text style={styles.seeMore} onPress={() => setExpanded(true)}>
+                {' '}
+                See More...
+              </Text>
+            ) : null}
+          </Text>
+        </View>
+      ) : null}
 
       {post.tags.length > 0 ? (
         <View style={styles.tags}>
@@ -118,7 +191,10 @@ export function PostCard({
                 onPress={() => onTagPress?.(tag)}
                 disabled={!onTagPress}
               >
-                <Text style={[styles.tagText, viewerHas && styles.tagTextMine]} numberOfLines={1}>
+                <Text
+                  style={[styles.tagText, viewerHas && styles.tagTextMine]}
+                  numberOfLines={1}
+                >
                   {tag.name}
                 </Text>
               </Pressable>
@@ -128,29 +204,56 @@ export function PostCard({
         </View>
       ) : null}
 
-      <MediaCarousel media={post.media} />
+      <MediaCarousel
+        media={post.media}
+        contentInset={spacing.md * 2}
+        borderRadius={MEDIA_RADIUS}
+        onPressItem={() => router.push(`/(app)/post/${post.id}` as never)}
+      />
 
       <View style={styles.actions}>
+        <View style={styles.actionGroup}>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={onToggleLike}
+            disabled={!currentUserId || liking}
+            accessibilityLabel={post.likedByMe ? 'Unlike' : 'Like'}
+          >
+            <Ionicons
+              name={post.likedByMe ? 'heart' : 'heart-outline'}
+              size={22}
+              color={post.likedByMe ? '#E11D48' : theme.colors.text}
+            />
+            <Text style={styles.actionCount}>{formatCount(post.likeCount)}</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => onOpenComments?.(post)}
+            accessibilityLabel="Comments"
+          >
+            <Ionicons name="chatbubble-outline" size={21} color={theme.colors.text} />
+            <Text style={styles.actionCount}>{formatCount(post.commentCount)}</Text>
+          </Pressable>
+
+          <Pressable style={styles.actionBtn} onPress={onShare} accessibilityLabel="Share">
+            <Ionicons name="paper-plane-outline" size={21} color={theme.colors.text} />
+          </Pressable>
+        </View>
+
         <Pressable
-          style={styles.actionBtn}
-          onPress={onToggleLike}
-          disabled={!currentUserId || liking}
-          accessibilityLabel={post.likedByMe ? 'Unlike' : 'Like'}
+          onPress={() => {
+            hapticLight();
+            setBookmarked((v) => !v);
+          }}
+          accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark'}
+          hitSlop={8}
         >
-          <Text style={[styles.actionGlyph, post.likedByMe && styles.actionGlyphActive]}>
-            {post.likedByMe ? '♥' : '♡'}
-          </Text>
-          <Text style={[styles.actionCount, post.likedByMe && styles.actionCountActive]}>
-            {post.likeCount}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => onOpenComments?.(post)}
-          accessibilityLabel="Comments"
-        >
-          <Text style={styles.actionLabel}>Comment</Text>
-          <Text style={styles.actionCount}>{post.commentCount}</Text>
+          <Ionicons
+            name={bookmarked ? 'bookmark' : 'bookmark-outline'}
+            size={22}
+            color={theme.colors.text}
+          />
         </Pressable>
       </View>
     </View>
@@ -159,54 +262,72 @@ export function PostCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.card,
+    elevation: 2,
+    gap: spacing.sm + 2,
+    marginHorizontal: spacing.md,
     padding: spacing.md,
+    shadowColor: theme.shadow.color,
+    shadowOffset: { width: 0, height: theme.shadow.offsetY },
+    shadowOpacity: theme.shadow.opacity,
+    shadowRadius: theme.shadow.radius,
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  author: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 12,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: 18,
-    height: 36,
+    backgroundColor: theme.colors.navActiveSoft,
+    borderRadius: theme.radii.avatar,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
   },
   avatarText: {
-    color: onboardingColors.primaryText,
+    color: theme.colors.text,
+    fontSize: 16,
     fontWeight: '800',
   },
-  handle: {
-    color: onboardingColors.text,
-    fontSize: 14,
+  meta: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  name: {
+    color: theme.colors.text,
+    fontSize: 16,
     fontWeight: '800',
+  },
+  subMeta: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   time: {
-    color: onboardingColors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
+    fontWeight: '500',
   },
-  more: {
-    color: onboardingColors.textMuted,
-    fontSize: 22,
-    fontWeight: '800',
-    paddingHorizontal: 8,
+  menuBtn: {
+    alignItems: 'center',
+    height: 32,
+    justifyContent: 'center',
+    width: 28,
+  },
+  captionBlock: {
+    paddingTop: 2,
   },
   caption: {
-    color: onboardingColors.text,
+    color: theme.colors.text,
     fontSize: 15,
     lineHeight: 22,
+  },
+  seeMore: {
+    color: theme.colors.text,
+    fontWeight: '800',
   },
   tags: {
     flexDirection: 'row',
@@ -214,57 +335,46 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagChip: {
-    backgroundColor: onboardingColors.chipSelectedBackground,
-    borderColor: onboardingColors.primaryBorder,
-    borderRadius: radii.pill,
-    borderWidth: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: theme.radii.pill,
     maxWidth: 140,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   tagText: {
-    color: onboardingColors.primaryText,
+    color: theme.colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
   tagTextMine: {
+    color: theme.colors.text,
     fontWeight: '800',
   },
   tagMore: {
     alignSelf: 'center',
-    color: onboardingColors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
     fontWeight: '700',
   },
   actions: {
     alignItems: 'center',
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+  actionGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.lg,
-    paddingTop: spacing.xs,
   },
   actionBtn: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
   },
-  actionGlyph: {
-    color: onboardingColors.textMuted,
-    fontSize: 20,
-  },
-  actionGlyphActive: {
-    color: '#C62828',
-  },
-  actionLabel: {
-    color: onboardingColors.textMuted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
   actionCount: {
-    color: onboardingColors.textMuted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  actionCountActive: {
-    color: onboardingColors.text,
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

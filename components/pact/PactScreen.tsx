@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { ActivePactCard } from '@/components/pact/ActivePactCard';
 import { PactCreateForm } from '@/components/pact/PactCreateForm';
@@ -9,10 +9,12 @@ import {
   type SealOverlayOrigin,
 } from '@/components/pact/SealPactOverlay';
 import { StreakCalendar } from '@/components/streak/StreakCalendar';
+import { KeyboardAware } from '@/components/ui/KeyboardAware';
 import { ScreenShell } from '@/components/ui/ScreenShell';
 import { dashboardColors } from '@/constants/dashboardTokens';
 import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { showAlert } from '@/store/useAlertStore';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { usePactStore } from '@/store/usePactStore';
 import { usePlanStore } from '@/store/usePlanStore';
@@ -79,7 +81,7 @@ export function PactScreen() {
   );
 
   const onComplete = (pactId: string) => {
-    Alert.alert(
+    showAlert(
       'Complete this pact?',
       'Only tap this when you’ve actually hit the goal — before the deadline.',
       [
@@ -89,7 +91,7 @@ export function PactScreen() {
           onPress: () => {
             void fulfillPact(pactId).then((result) => {
               if (!result.ok) {
-                Alert.alert('Couldn’t complete', result.message);
+                showAlert('Couldn’t complete', result.message);
               }
             });
           },
@@ -99,7 +101,7 @@ export function PactScreen() {
   };
 
   const onAbandon = (pactId: string) => {
-    Alert.alert(
+    showAlert(
       'Abandon this pact?',
       'Missing the goal lowers your rating (−15).',
       [
@@ -117,6 +119,7 @@ export function PactScreen() {
 
   return (
     <ScreenShell>
+      <KeyboardAware>
       <ScrollView
         scrollEnabled={scrollEnabled}
         contentContainerStyle={{
@@ -124,6 +127,8 @@ export function PactScreen() {
           gap: spacing.md,
         }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         <Text style={styles.keptCount}>Pacts kept: {pactsFulfilled}</Text>
         <Text style={styles.lead}>
@@ -170,6 +175,7 @@ export function PactScreen() {
         <Text style={styles.sectionSub}>Completed and broken pacts</Text>
         <PactHistoryList items={history} />
       </ScrollView>
+      </KeyboardAware>
 
       {sealOrigin ? (
         <SealPactOverlay

@@ -1,8 +1,8 @@
-import { Alert } from 'react-native';
 import { getAccessToken, signOut } from '@/lib/auth';
 import { ApiError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import type { ApiErrorBody } from '@/lib/errors';
 import { createLogger } from '@/lib/logger';
+import { showAlert } from '@/store/useAlertStore';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useUserStore } from '@/store/useUserStore';
@@ -18,7 +18,7 @@ async function handleUnauthorized(path: string) {
   usePlanStore.getState().clearSession();
   usePreferencesStore.getState().clearSession();
   useUserStore.getState().clearSession();
-  Alert.alert('Session expired', getKnownUserMessage(ErrorCodes.SESSION_EXPIRED));
+  showAlert('Session expired', getKnownUserMessage(ErrorCodes.SESSION_EXPIRED));
 }
 
 type RequestOptions = {

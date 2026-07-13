@@ -106,3 +106,18 @@ export async function markLessonCompleted(lessonId: string): Promise<boolean> {
 
   return true;
 }
+
+export async function markLessonSkipped(lessonId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('roadmap_lessons')
+    .update({ status: 'skipped', updated_at: new Date().toISOString() })
+    .eq('id', lessonId)
+    .neq('status', 'skipped');
+
+  if (error) {
+    log.warn('Failed to mark lesson skipped', { lessonId, error: error.message });
+    return false;
+  }
+
+  return true;
+}
