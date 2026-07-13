@@ -56,7 +56,10 @@ function CurrentIcon({ color = onboardingColors.text }: { color?: string }) {
 }
 
 function SessionIcon({ item }: { item: LearningPathNode }) {
-  if (item.nodeKind === 'section_review' || item.visualState === 'locked') {
+  if (item.nodeKind === 'practice') {
+    return <CurrentIcon color={onboardingColors.primaryText} />;
+  }
+  if (item.visualState === 'locked') {
     return <LockIcon />;
   }
   if (item.visualState === 'skipped') {

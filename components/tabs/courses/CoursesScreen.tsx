@@ -16,10 +16,10 @@ import {
   type HobbyBlockProgress,
 } from '@/components/home/HobbyRoadmapBlock';
 import { PlantDoodle } from '@/components/home/HobbyBlockIllustration';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
 import { spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { useFloatingTabBarOccupiedHeight } from '@/hooks/useFloatingTabBarInset';
 import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
 import type { RoadmapRow } from '@/types/roadmap.types';
@@ -43,6 +43,7 @@ export function CoursesScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();
   const setSelectedRoadmapId = useRoadmapUiStore((s) => s.setSelectedRoadmapId);
+  const bottomInset = useFloatingTabBarOccupiedHeight() + 24;
 
   const cardWidth = Math.floor((windowWidth - spacing.md * 2 - GAP) / 2);
 
@@ -105,7 +106,7 @@ export function CoursesScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: FLOATING_TAB_BAR_HEIGHT + 24 },
+          { paddingBottom: bottomInset },
         ]}
         showsVerticalScrollIndicator={false}
       >

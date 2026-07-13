@@ -22,8 +22,9 @@ export default function TabsLayout() {
   const storeHydrated = usePlanStoreHydrated();
 
   const onboardingComplete = hasCompletedOnboarding(completedOnboardingAt);
+  const preferencesDone = hasCompletedPreferences(preferences);
   const waitingForCloud =
-    !onboardingComplete && hobbies.length === 0 && cloudHydrationStatus !== 'done';
+    !onboardingComplete && !preferencesDone && hobbies.length === 0 && cloudHydrationStatus !== 'done';
   const waitingForUser = userHydrationStatus !== 'done';
   const waitingForPreferences = preferencesHydrationStatus !== 'done';
 
@@ -33,7 +34,7 @@ export default function TabsLayout() {
     const route = getPostAuthRoute({
       username,
       completedOnboardingAt,
-      hasPreferences: hasCompletedPreferences(preferences),
+      hasPreferences: preferencesDone,
       hasHobbies: hobbies.length > 0,
     });
 
@@ -43,7 +44,7 @@ export default function TabsLayout() {
   }, [
     completedOnboardingAt,
     hobbies.length,
-    preferences,
+    preferencesDone,
     router,
     storeHydrated,
     username,
@@ -56,7 +57,7 @@ export default function TabsLayout() {
     return <BootSpinner />;
   }
 
-  if (!onboardingComplete && (waitingForCloud || hobbies.length === 0)) {
+  if (!onboardingComplete && !preferencesDone && (waitingForCloud || hobbies.length === 0)) {
     return <BootSpinner />;
   }
 
@@ -71,7 +72,7 @@ export default function TabsLayout() {
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
-          height: 90,
+          // Height comes from FloatingTabBar + safe-area padding (button vs gesture nav).
           position: 'absolute',
         },
       }}

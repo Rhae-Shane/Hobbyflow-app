@@ -10,10 +10,12 @@ import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 
 /**
  * App stack (outside floating tabs):
- * - welcome, preferences, roadmap-creation, onboarding → first-run only
+ * - welcome, preferences, claim-username → first-run only
+ * - roadmap-creation → redirects to Generation tab
+ * - onboarding → legacy redirect
  * - roadmap-preview/[id] → after CREATE ROADMAP
  * - roadmap/[id] → learning-path detail (from Home / Courses)
- * - (tabs) → Home | Feed | Generation (Profile via home avatar; Courses via See all)
+ * - (tabs) → Home | Feed | Generation (roadmap creation chat) | Profile via avatar
  * - technique/[techniqueId] → detail
  */
 function isFirstRunOnlySegment(segments: string[]): boolean {
@@ -21,7 +23,6 @@ function isFirstRunOnlySegment(segments: string[]): boolean {
   return (
     leaf === 'welcome' ||
     leaf === 'preferences' ||
-    leaf === 'roadmap-creation' ||
     leaf === 'onboarding' ||
     leaf === 'claim-username'
   );

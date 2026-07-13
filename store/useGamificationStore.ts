@@ -61,6 +61,15 @@ type GamificationState = {
   generateTodayTask: (mode: GenerateDailyTaskMode) => Promise<DailyTaskRow | null>;
   completeDailyTask: (taskId?: string) => Promise<{ ratingAwarded: number } | null>;
   onLessonCompleted: (hobbyId: string | null | undefined) => Promise<void>;
+  applyGamificationSnapshot: (snapshot: {
+    rating: number;
+    peak_rating: number;
+    league_id: string | null;
+    current_streak: number;
+    longest_streak: number;
+    activity_dates: string[];
+    last_activity_date: string | null;
+  }) => void;
   refreshLeaderboard: () => Promise<void>;
   leagueName: () => string;
 };
@@ -333,6 +342,18 @@ export const useGamificationStore = create<GamificationState>()(
         } finally {
           set({ isCompletingTask: false });
         }
+      },
+
+      applyGamificationSnapshot: (snapshot) => {
+        set({
+          rating: snapshot.rating,
+          peakRating: snapshot.peak_rating,
+          leagueId: snapshot.league_id ?? get().leagueId,
+          currentStreak: snapshot.current_streak,
+          longestStreak: snapshot.longest_streak,
+          activityDates: snapshot.activity_dates ?? [],
+          lastActivityDate: snapshot.last_activity_date,
+        });
       },
 
       onLessonCompleted: async (hobbyId) => {

@@ -1,6 +1,6 @@
-import { RoadmapCreationChatScreen } from '@/components/roadmap-creation/RoadmapCreationChatScreen';
+import { Redirect } from 'expo-router';
 
-/** First-time onboarding stack route (outside tabs). */
+/** Legacy stack route — creation lives on the Generation tab. */
 export default function RoadmapCreationRoute() {
-  return <RoadmapCreationChatScreen variant="onboarding" />;
+  return <Redirect href="/(app)/(tabs)/generate" />;
 }

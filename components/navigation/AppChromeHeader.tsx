@@ -2,7 +2,6 @@ import { type ReactNode, useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { usePathname, useRouter } from 'expo-router';
-import { BrandLogo } from '@/components/brand/BrandLogo';
 import { theme } from '@/constants/theme';
 import { fonts, spacing } from '@/constants/tokens';
 import { learnInPublic } from '@/constants/learnInPublic';
@@ -136,7 +135,6 @@ function HomeChrome() {
       </Pressable>
 
       <View style={styles.homeBrand}>
-        <BrandLogo size={28} />
         <Text style={styles.homeTitle} numberOfLines={1}>
           HobbyFlow
         </Text>

@@ -138,19 +138,21 @@ export function SealPactHoldButton({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.halo} pointerEvents="none" />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Press and hold to seal the Pact"
-        accessibilityState={{ disabled: pressDisabled }}
-        disabled={pressDisabled}
-        onPressIn={onPressIn}
-        onPressOut={cancelHold}
-        style={[styles.button, dimmed && styles.buttonActive]}
-        testID="seal-pact-hold"
-      >
-        <Text style={styles.buttonGlyph}>✦</Text>
-      </Pressable>
+      <View style={styles.buttonStage}>
+        <View style={styles.halo} pointerEvents="none" />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Press and hold to seal the Pact"
+          accessibilityState={{ disabled: pressDisabled }}
+          disabled={pressDisabled}
+          onPressIn={onPressIn}
+          onPressOut={cancelHold}
+          style={[styles.button, dimmed && styles.buttonActive]}
+          testID="seal-pact-hold"
+        >
+          <Text style={styles.buttonGlyph}>✦</Text>
+        </Pressable>
+      </View>
       <Text style={styles.hint}>
         {phase === 'sealing' ? 'Sealing your pact…' : 'Press & hold to seal your pact'}
       </Text>
@@ -167,13 +169,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
   },
+  buttonStage: {
+    alignItems: 'center',
+    height: 128,
+    justifyContent: 'center',
+    width: 128,
+  },
   halo: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: theme.colors.accentOrangeSoft,
     borderRadius: 64,
-    height: 128,
-    position: 'absolute',
-    top: 8,
-    width: 128,
   },
   button: {
     alignItems: 'center',

@@ -3,7 +3,8 @@ import { EditBioLinksSheet } from '@/components/profile/EditBioLinksSheet';
 import { HobbyTagsRow } from '@/components/profile/HobbyTagsRow';
 import { SocialLinksRow } from '@/components/profile/SocialLinksRow';
 import { InlineError } from '@/components/ui/InlineError';
-import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
+import { ScreenShell, useTabScrollBottomInset } from '@/components/ui/ScreenShell';
+import { GraphPaperGrid } from '@/components/ui/GraphPaperGrid';
 import { theme } from '@/constants/theme';
 import { learnInPublic } from '@/constants/learnInPublic';
 import { fonts, spacing } from '@/constants/tokens';
@@ -89,6 +90,7 @@ export function ProfileScreen() {
   const rating = useGamificationStore((s) => s.rating);
   const leagueId = useGamificationStore((s) => s.leagueId);
   const leagues = useGamificationStore((s) => s.leagues);
+  const tabScrollBottomInset = useTabScrollBottomInset();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [claimOpen, setClaimOpen] = useState(false);
@@ -233,14 +235,11 @@ export function ProfileScreen() {
 
   return (
     <ScreenShell padded={false} style={{ backgroundColor: theme.colors.background }}>
+      <GraphPaperGrid />
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: tabScrollBottomInset + 48 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-        </View>
-
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
@@ -339,18 +338,7 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   scroll: {
     gap: spacing.md,
-    paddingBottom: TAB_SCROLL_BOTTOM_INSET + 48,
     paddingHorizontal: spacing.md,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: 4,
-    paddingBottom: 4,
-  },
-  title: {
-    color: theme.colors.text,
-    fontFamily: fonts.bodyBold,
-    fontSize: 20,
   },
   identityCard: {
     alignItems: 'center',

@@ -1,7 +1,9 @@
 import { createLogger } from '@/lib/logger';
 import { AppError, ErrorCodes, getKnownUserMessage } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
+import { completeOnboarding } from '@/services/user';
 import {
+  hasCompletedPreferences,
   normalizeUserRole,
   type UserPreferences,
   type UserPreferencesRow,
@@ -98,10 +100,19 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
   }
 }
 
+export type SaveUserPreferencesResult = {
+  /** True when all required preference fields are filled and onboarding was marked complete. */
+  preferencesComplete: boolean;
+};
+
+/**
+ * Upserts preferences. When the payload is fully filled, also sets
+ * `users.completed_onboarding_at` (idempotent).
+ */
 export async function saveUserPreferences(
   userId: string,
   preferences: UserPreferences,
-): Promise<void> {
+): Promise<SaveUserPreferencesResult> {
   log.debug('Saving user preferences', {
     userId,
     topGoals: preferences.topGoals.length,
@@ -125,5 +136,13 @@ export async function saveUserPreferences(
     });
   }
 
-  log.info('User preferences saved', { userId });
+  const preferencesComplete = hasCompletedPreferences(preferences);
+  if (preferencesComplete) {
+    await completeOnboarding(userId);
+    log.info('User preferences saved and onboarding marked complete', { userId });
+  } else {
+    log.info('User preferences saved', { userId });
+  }
+
+  return { preferencesComplete };
 }

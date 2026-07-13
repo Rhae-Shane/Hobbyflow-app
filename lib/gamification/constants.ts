@@ -1,4 +1,5 @@
 export const DAILY_TASK_RATING_REWARD = 10;
+export const EXERCISE_COMPLETE_RATING = 5;
 export const MISS_PENALTY_RATING = 5;
 export const INITIAL_STREAK_SAVERS = 3;
 export const MAX_STREAK_BONUS = 7;

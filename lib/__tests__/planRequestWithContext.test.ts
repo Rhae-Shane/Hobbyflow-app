@@ -25,10 +25,9 @@ describe('buildPlanRequestWithContext', () => {
       preferences,
     );
 
-    expect(request.learnerContext).toContain('Learner context:');
-    expect(request.learnerContext).toContain('Student');
-    expect(request.learnerContext).toContain('Practice environment:');
-    expect(request.learnerContext).toContain('Resource budget: Free resources only');
+    expect(request.learnerContext).toContain('Role: Student');
+    expect(request.learnerContext).toContain('Environment:');
+    expect(request.learnerContext).toContain('Budget: Free resources only');
   });
 
   it('supports custom userRole in learnerContext', () => {
@@ -42,7 +41,7 @@ describe('buildPlanRequestWithContext', () => {
       { ...preferences, userRole: 'Independent artist' },
     );
 
-    expect(request.learnerContext).toContain('- Independent artist');
+    expect(request.learnerContext).toContain('Role: Independent artist');
   });
 
   it('omits learnerContext when preferences are incomplete', () => {

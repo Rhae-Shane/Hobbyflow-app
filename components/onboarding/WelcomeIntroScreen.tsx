@@ -37,7 +37,7 @@ export function WelcomeIntroScreen() {
       return;
     }
     if (hasCompletedPreferences(preferences)) {
-      router.replace('/(app)/roadmap-creation' as never);
+      router.replace('/(app)/(tabs)' as never);
       return;
     }
     // Resume mid-wizard without replaying this intro.

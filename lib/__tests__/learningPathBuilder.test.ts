@@ -111,9 +111,9 @@ describe('learningPathBuilder', () => {
       'Keeping Time',
       'Note Values',
       'Rhythm Basics',
-      'Section Review',
+      'Now practice',
       'Hand Techniques',
-      'Section Review',
+      'Now practice',
     ]);
   });
 
@@ -142,7 +142,7 @@ describe('learningPathBuilder', () => {
     expect(current).toMatchObject({ label: 'Note Values' });
   });
 
-  it('marks completed lessons and inserts locked section reviews', () => {
+  it('marks completed lessons and inserts practice CTAs', () => {
     const withDone: RoadmapLessonRow[] = [
       pathRow(path1, lesson1, 0, 'completed', 'Keeping Time'),
       pathRow(path2, lesson2, 1, 'pending_content', 'Note Values'),
@@ -155,14 +155,14 @@ describe('learningPathBuilder', () => {
     );
     expect(keeping).toMatchObject({ visualState: 'completed' });
 
-    const reviews = items.filter(
-      (i) => i.kind === 'path_node' && i.nodeKind === 'section_review',
+    const practices = items.filter(
+      (i) => i.kind === 'path_node' && i.nodeKind === 'practice',
     );
-    expect(reviews).toHaveLength(2);
-    expect(reviews.every((r) => r.kind === 'path_node' && r.visualState === 'locked')).toBe(
+    expect(practices).toHaveLength(2);
+    expect(practices.every((r) => r.kind === 'path_node' && r.visualState === 'available')).toBe(
       true,
     );
-    expect(reviews[0]).toMatchObject({ subtitle: '0/2 sessions' });
+    expect(practices[0]).toMatchObject({ label: 'Now practice', subtitle: 'Open practice' });
   });
 
   it('tags applied lessons with Advanced Lesson subtitle', () => {

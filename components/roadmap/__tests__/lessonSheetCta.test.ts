@@ -6,10 +6,10 @@ function ctaLabel(status: LearningPathNode['lessonStatus'], hasPages: boolean): 
   const canStart =
     hasPages && (status === 'ready' || status === 'in_progress' || status === 'completed');
   if (canStart) {
-    return status === 'completed' ? 'REVIEW LESSON' : 'START LESSON';
+    return status === 'completed' ? 'Review lesson' : 'Start lesson';
   }
-  if (status === 'failed') return 'RETRY GENERATE';
-  return 'GENERATE AND JUMP AHEAD';
+  if (status === 'failed') return 'Retry generate';
+  return 'Generate lesson';
 }
 
 function showRegenerate(status: RoadmapLessonStatus | undefined): boolean {
@@ -27,15 +27,15 @@ function showSkip(status: RoadmapLessonStatus | undefined): boolean {
 
 describe('lesson sheet CTA', () => {
   it('shows generate for pending_content', () => {
-    expect(ctaLabel('pending_content', false)).toBe('GENERATE AND JUMP AHEAD');
+    expect(ctaLabel('pending_content', false)).toBe('Generate lesson');
   });
 
   it('shows start for ready with pages', () => {
-    expect(ctaLabel('ready', true)).toBe('START LESSON');
+    expect(ctaLabel('ready', true)).toBe('Start lesson');
   });
 
   it('shows retry for failed', () => {
-    expect(ctaLabel('failed', false)).toBe('RETRY GENERATE');
+    expect(ctaLabel('failed', false)).toBe('Retry generate');
   });
 
   it('shows skipped state without generate', () => {
@@ -48,6 +48,13 @@ describe('lesson sheet CTA', () => {
     expect(showRegenerate('completed')).toBe(true);
     expect(showRegenerate('pending_content')).toBe(false);
     expect(showRegenerate('skipped')).toBe(false);
+  });
+
+  it('uses sentence-case primary labels', () => {
+    expect(ctaLabel('ready', true)).toBe('Start lesson');
+    expect(ctaLabel('completed', true)).toBe('Review lesson');
+    expect(ctaLabel('failed', false)).toBe('Retry generate');
+    expect(ctaLabel('pending_content', false)).toBe('Generate lesson');
   });
 
   it('shows skip unless already skipped', () => {

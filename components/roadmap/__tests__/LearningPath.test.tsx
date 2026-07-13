@@ -32,21 +32,24 @@ describe('LearningPathNodeView', () => {
     expect(onPress).toHaveBeenCalledWith(baseNode);
   });
 
-  it('shows locked section review subtitle', () => {
-    const locked: LearningPathNode = {
+  it('shows Now practice CTA', () => {
+    const practice: LearningPathNode = {
       ...baseNode,
-      id: 'review-1',
-      nodeKind: 'section_review',
-      label: 'Section Review',
-      subtitle: '0/2 sessions',
-      visualState: 'locked',
+      id: 'practice-1',
+      nodeKind: 'practice',
+      label: 'Now practice',
+      subtitle: 'Open practice',
+      visualState: 'available',
       nodeId: null,
     };
-    const { getByText } = render(
-      <LearningPathNodeView item={locked} onPress={jest.fn()} />,
+    const onPress = jest.fn();
+    const { getByText, getByTestId } = render(
+      <LearningPathNodeView item={practice} onPress={onPress} />,
     );
-    expect(getByText('Section Review')).toBeTruthy();
-    expect(getByText('0/2 sessions')).toBeTruthy();
+    expect(getByText('Now practice')).toBeTruthy();
+    expect(getByText('Open practice')).toBeTruthy();
+    fireEvent.press(getByTestId('path-node-practice-1'));
+    expect(onPress).toHaveBeenCalledWith(practice);
   });
 
   it('renders skipped lesson with strikethrough label', () => {
@@ -68,7 +71,7 @@ describe('LearningPathNodeView', () => {
 describe('LearningPathSectionBar', () => {
   it('shows progress and toggles dropdown', () => {
     const onToggle = jest.fn();
-    const onJournal = jest.fn();
+    const onMenu = jest.fn();
     const { getByText, getByTestId } = render(
       <LearningPathSectionBar
         item={{
@@ -82,7 +85,7 @@ describe('LearningPathSectionBar', () => {
         }}
         expanded={false}
         onToggle={onToggle}
-        onJournalPress={onJournal}
+        onMenuPress={onMenu}
       />,
     );
 
@@ -90,8 +93,8 @@ describe('LearningPathSectionBar', () => {
     expect(getByText('0/3 lessons')).toBeTruthy();
     fireEvent.press(getByTestId('section-bar-sec-1'));
     expect(onToggle).toHaveBeenCalledWith('sec-1');
-    fireEvent.press(getByTestId('section-journal-sec-1'));
-    expect(onJournal).toHaveBeenCalledWith('sec-1');
+    fireEvent.press(getByTestId('section-menu-sec-1'));
+    expect(onMenu).toHaveBeenCalled();
   });
 });
 

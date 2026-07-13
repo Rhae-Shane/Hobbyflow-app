@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BootSpinner } from '@/components/BootSpinner';
 import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
+import { ExercisePane } from '@/components/roadmap/ExercisePane';
 import { LearningPathScroll } from '@/components/roadmap/LearningPathScroll';
 import { LessonPlayerScreen } from '@/components/roadmap/LessonPlayerScreen';
 import { MindMapCanvas } from '@/components/roadmap/MindMapCanvas';
@@ -30,9 +31,11 @@ import { showAlert } from '@/store/useAlertStore';
 import {
   buildLearningPath,
   type LearningPathNode,
+  type LearningPathSectionHeader,
 } from '@/lib/roadmap/learningPathBuilder';
 import type { LaidOutNode } from '@/lib/roadmap/mindMapLayout';
 import { mindMapColors } from '@/lib/roadmap/mindMapLayout';
+import { listExercises } from '@/services/exercises';
 import {
   fetchRoadmapDetail,
   fetchUserRoadmaps,
@@ -40,6 +43,7 @@ import {
   generateRoadmapMindMap,
   markLessonCompleted,
   markLessonSkipped,
+  regenerateSection,
 } from '@/services/roadmaps';
 import type { LessonNodeContent } from '@/types/lessonContent.types';
 import type { MindMapNode, RoadmapMindMap, RoadmapNodeRow, RoadmapRow } from '@/types/roadmap.types';
@@ -78,6 +82,7 @@ export function RoadmapHomeScreen({
   const id = roadmapId ?? routeId;
 
   const [mode, setMode] = useState<PathMode>('map');
+  const [exerciseSectionId, setExerciseSectionId] = useState<string | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [conceptOpen, setConceptOpen] = useState(false);
   const [conceptEarlyAccess, setConceptEarlyAccess] = useState(false);
@@ -100,6 +105,24 @@ export function RoadmapHomeScreen({
     enabled: Boolean(id),
   });
 
+  const exercisesQuery = useQuery({
+    queryKey: ['roadmap-exercises', id, 'all'],
+    queryFn: () => listExercises(id!),
+    enabled: Boolean(id),
+  });
+
+  const practiceCountByNodeId = useMemo(() => {
+    const map = new Map<string, number>();
+    const lessons = detailQuery.data?.lessons ?? [];
+    const lessonIdToNode = new Map(lessons.map((l) => [l.id, l.node_id]));
+    for (const ex of exercisesQuery.data?.exercises ?? []) {
+      const nodeId = lessonIdToNode.get(ex.lesson_id);
+      if (!nodeId) continue;
+      map.set(nodeId, (map.get(nodeId) ?? 0) + 1);
+    }
+    return map;
+  }, [detailQuery.data?.lessons, exercisesQuery.data?.exercises]);
+
   const roadmapsQuery = useQuery({
     queryKey: ['user-roadmaps', user?.id],
     queryFn: () => fetchUserRoadmaps(user!.id),
@@ -116,11 +139,37 @@ export function RoadmapHomeScreen({
   });
 
   const generateLessonMutation = useMutation({
-    mutationFn: ({ lessonId, force }: { lessonId: string; force?: boolean }) =>
-      generateLesson(id!, lessonId, force ? { force: true } : undefined),
-    onSuccess: async (result) => {
+    mutationFn: ({
+      lessonId,
+      force,
+      rewriteSession,
+    }: {
+      lessonId: string;
+      force?: boolean;
+      rewriteSession?: boolean;
+    }) =>
+      generateLesson(id!, lessonId, {
+        force: force || rewriteSession ? true : undefined,
+        rewriteSession: rewriteSession || undefined,
+      }),
+    onSuccess: async (result, variables) => {
       setGenerateError(null);
       await queryClient.invalidateQueries({ queryKey: ['roadmap-detail', id] });
+      const detail = queryClient.getQueryData(['roadmap-detail', id]) as
+        | { lessons?: Array<{ id: string; session_config?: { name?: string; hook?: string; meaning?: string } }> }
+        | undefined;
+      const refreshed = detail?.lessons?.find((l) => l.id === variables.lessonId);
+      if (refreshed && selectedLesson?.id === variables.lessonId) {
+        setSelectedLesson((prev) =>
+          prev
+            ? {
+                ...prev,
+                label: refreshed.session_config?.name ?? prev.label,
+                sessionConfig: refreshed.session_config ?? prev.sessionConfig,
+              }
+            : prev,
+        );
+      }
       if (result.status === 'success') {
         setPlayerOpen(true);
       } else if (result.status === 'failed') {
@@ -129,6 +178,26 @@ export function RoadmapHomeScreen({
     },
     onError: (error: Error) => {
       setGenerateError(error.message || 'Lesson generation failed');
+    },
+  });
+
+  const regenerateSectionMutation = useMutation({
+    mutationFn: async (section: LearningPathSectionHeader) => {
+      const outline = await regenerateSection(id!, section.sectionId, {
+        regenerateContent: false,
+      });
+      // Rebuild multimedia for each rewritten lesson (sequential so we don't stampede APIs).
+      for (const lessonId of outline.lessonIds) {
+        await generateLesson(id!, lessonId, { force: true });
+      }
+      return outline;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['roadmap-detail', id] });
+      showAlert('Section updated', 'Titles and lesson content were regenerated.');
+    },
+    onError: (error: Error) => {
+      showAlert('Couldn’t regenerate section', error.message || 'Please try again.');
     },
   });
 
@@ -204,11 +273,11 @@ export function RoadmapHomeScreen({
       items.push({
         node,
         status: lessonStatusByNodeId.get(lessonId) ?? 'unknown',
-        practiceCount: 0,
+        practiceCount: practiceCountByNodeId.get(lessonId) ?? 0,
       });
     }
     return items;
-  }, [selectedConcept, lessonById, lessonStatusByNodeId]);
+  }, [selectedConcept, lessonById, lessonStatusByNodeId, practiceCountByNodeId]);
 
   const pathProgress = useMemo(() => {
     const detail = detailQuery.data;
@@ -274,11 +343,17 @@ export function RoadmapHomeScreen({
   const sheetBusy =
     generateLessonMutation.isPending ||
     selectedLessonStatus === 'generating' ||
-    skipLessonMutation.isPending;
+    skipLessonMutation.isPending ||
+    regenerateSectionMutation.isPending;
 
   const onNodePress = (item: LearningPathNode) => {
-    if (item.visualState === 'locked' || item.nodeKind === 'section_review') {
-      showAlert('Section review', 'Section review unlocks after you finish the lessons.');
+    if (item.nodeKind === 'practice') {
+      setExerciseSectionId(item.sectionId);
+      setMode('exercise');
+      return;
+    }
+    if (item.visualState === 'locked') {
+      showAlert('Locked', 'This item is not available yet.');
       return;
     }
     setGenerateError(null);
@@ -295,15 +370,15 @@ export function RoadmapHomeScreen({
     generateLessonMutation.mutate({ lessonId: selectedLesson.id });
   };
 
-  const onRegenerateLesson = () => {
+  const onRegenerateMedia = () => {
     if (!selectedLesson || isSkipped) return;
     showAlert(
-      'Regenerate lesson?',
-      'This rebuilds text, images, video, and audio for this lesson.',
+      'Regenerate media?',
+      'Keeps this lesson title and rebuilds text, images, video, and audio.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Regenerate',
+          text: 'Regenerate media',
           onPress: () => {
             setGenerateError(null);
             generateLessonMutation.mutate({ lessonId: selectedLesson.id, force: true });
@@ -311,6 +386,57 @@ export function RoadmapHomeScreen({
         },
       ],
     );
+  };
+
+  const onRegenerateWholeLesson = () => {
+    if (!selectedLesson || isSkipped) return;
+    showAlert(
+      'Regenerate whole lesson?',
+      'Rewrites the title, hook, and meaning, then rebuilds all lesson content and media.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate lesson',
+          onPress: () => {
+            setGenerateError(null);
+            generateLessonMutation.mutate({
+              lessonId: selectedLesson.id,
+              force: true,
+              rewriteSession: true,
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  const onRegenerateSection = (section: LearningPathSectionHeader) => {
+    if (regenerateSectionMutation.isPending) return;
+    showAlert(
+      'Regenerate section?',
+      `Rewrites “${section.name}” and its lesson titles, then rebuilds each lesson’s content. This can take a few minutes.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate section',
+          onPress: () => regenerateSectionMutation.mutate(section),
+        },
+      ],
+    );
+  };
+
+  const onSectionMenu = (section: LearningPathSectionHeader) => {
+    showAlert(section.name, undefined, [
+      {
+        text: 'Open concept map',
+        onPress: () => openConceptMap(),
+      },
+      {
+        text: 'Regenerate section',
+        onPress: () => onRegenerateSection(section),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const onSkipLesson = () => {
@@ -400,6 +526,7 @@ export function RoadmapHomeScreen({
           lessons={lessons}
           onNodePress={onNodePress}
           onJournalPress={() => openConceptMap()}
+          onSectionMenu={onSectionMenu}
           listRef={sessionsListRef}
           bottomInset={contentBottomInset}
           header={
@@ -409,7 +536,10 @@ export function RoadmapHomeScreen({
               completedLessons={pathProgress.completed}
               totalLessons={pathProgress.total}
               mode={mode}
-              onModeChange={setMode}
+              onModeChange={(next) => {
+                if (next === 'exercise') setExerciseSectionId(null);
+                setMode(next);
+              }}
               onOpenSwitcher={() => setSwitcherOpen(true)}
               onOpenMenu={onOpenMenu}
               onViewSessions={scrollToSessions}
@@ -417,26 +547,32 @@ export function RoadmapHomeScreen({
           }
         />
       ) : (
-        <View style={styles.exercisePane}>
-          <RoadmapPathCard
-            title={roadmap.title}
-            subtitle={moduleSubtitle}
-            completedLessons={pathProgress.completed}
-            totalLessons={pathProgress.total}
-            mode={mode}
-            onModeChange={setMode}
-            onOpenSwitcher={() => setSwitcherOpen(true)}
-            onOpenMenu={onOpenMenu}
-            onViewSessions={() => setMode('map')}
-          />
-          <View style={styles.exerciseEmpty} testID="exercise-empty">
-            <Text style={styles.exerciseTitle}>Exercises coming soon</Text>
-            <Text style={styles.exerciseBody}>
-              Practice sessions will appear here after lesson content is ready. No practices are
-              created yet.
-            </Text>
-          </View>
-        </View>
+        <ExercisePane
+          roadmapId={roadmap.id}
+          nodes={nodes}
+          lessons={lessons}
+          sectionFilterId={exerciseSectionId}
+          bottomInset={contentBottomInset}
+          header={
+            <RoadmapPathCard
+              title={roadmap.title}
+              subtitle={moduleSubtitle}
+              completedLessons={pathProgress.completed}
+              totalLessons={pathProgress.total}
+              mode={mode}
+              onModeChange={(next) => {
+                if (next === 'map') setExerciseSectionId(null);
+                setMode(next);
+              }}
+              onOpenSwitcher={() => setSwitcherOpen(true)}
+              onOpenMenu={onOpenMenu}
+              onViewSessions={() => {
+                setExerciseSectionId(null);
+                setMode('map');
+              }}
+            />
+          }
+        />
       )}
 
       <BottomSheetOrModal
@@ -444,6 +580,7 @@ export function RoadmapHomeScreen({
         onClose={() => setSelectedLesson(null)}
         sheetStyle={styles.sheet}
       >
+        <View style={styles.sheetHandle} />
         <Text style={styles.sheetTitle}>{selectedLesson?.label}</Text>
         {selectedLesson?.sessionConfig?.hook ? (
           <Text style={styles.sheetHook}>{selectedLesson.sessionConfig.hook}</Text>
@@ -451,16 +588,19 @@ export function RoadmapHomeScreen({
         {selectedLesson?.sessionConfig?.meaning ? (
           <Text style={styles.sheetMeaning}>{selectedLesson.sessionConfig.meaning}</Text>
         ) : null}
-        <Text style={styles.sheetSoon} testID="lesson-sheet-body">
+        <Text style={styles.sheetStatus} testID="lesson-sheet-body">
           {isSkipped
             ? 'You skipped this lesson. It no longer counts toward section progress.'
             : generateLessonMutation.isPending || selectedLessonStatus === 'generating'
               ? 'Building your lesson with text, images, video, and audio…'
               : needsGenerate
-                ? 'This lesson will be generated when you start it.'
-                : 'Your lesson is ready — text, images, video, and audio included.'}
+                ? 'Generate this lesson to unlock text, images, video, and audio.'
+                : 'Lesson ready — text, images, video, and audio included.'}
         </Text>
         {generateError ? <InlineError message={generateError} /> : null}
+        {regenerateSectionMutation.isPending ? (
+          <Text style={styles.sheetStatus}>Regenerating section…</Text>
+        ) : null}
         {isSkipped ? null : generateLessonMutation.isPending ||
           selectedLessonStatus === 'generating' ? (
           <View style={styles.generatingRow}>
@@ -468,44 +608,60 @@ export function RoadmapHomeScreen({
             <Text style={styles.sheetMeaning}>This can take up to a minute.</Text>
           </View>
         ) : (
-          <Pressable
-            style={styles.primaryCta}
-            onPress={onGenerateOrStart}
-            testID="lesson-generate-cta"
-            disabled={sheetBusy}
-          >
-            <Text style={styles.primaryCtaText}>
-              {canStart
-                ? selectedLessonStatus === 'completed'
-                  ? 'REVIEW LESSON'
-                  : 'START LESSON'
-                : selectedLessonStatus === 'failed'
-                  ? 'RETRY GENERATE'
-                  : 'GENERATE AND JUMP AHEAD'}
-            </Text>
-          </Pressable>
+          <View style={styles.sheetActions}>
+            <Pressable
+              style={styles.primaryCta}
+              onPress={onGenerateOrStart}
+              testID="lesson-generate-cta"
+              disabled={sheetBusy}
+            >
+              <Text style={styles.primaryCtaText}>
+                {canStart
+                  ? selectedLessonStatus === 'completed'
+                    ? 'Review lesson'
+                    : 'Start lesson'
+                  : selectedLessonStatus === 'failed'
+                    ? 'Retry generate'
+                    : 'Generate lesson'}
+              </Text>
+            </Pressable>
+            {canRegenerate ? (
+              <>
+                <Pressable
+                  style={styles.secondary}
+                  onPress={onRegenerateMedia}
+                  testID="lesson-regenerate-media-cta"
+                  disabled={sheetBusy}
+                >
+                  <Text style={styles.secondaryText}>Regenerate media</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondary}
+                  onPress={onRegenerateWholeLesson}
+                  testID="lesson-regenerate-whole-cta"
+                  disabled={sheetBusy}
+                >
+                  <Text style={styles.secondaryText}>Regenerate whole lesson</Text>
+                </Pressable>
+              </>
+            ) : null}
+            {!sheetBusy ? (
+              <Pressable
+                style={styles.skipLink}
+                onPress={onSkipLesson}
+                testID="lesson-skip-cta"
+              >
+                <Text style={styles.skipLinkText}>Skip lesson</Text>
+              </Pressable>
+            ) : null}
+          </View>
         )}
-        {!isSkipped && canRegenerate && !generateLessonMutation.isPending ? (
-          <Pressable
-            style={styles.secondary}
-            onPress={onRegenerateLesson}
-            testID="lesson-regenerate-cta"
-            disabled={sheetBusy}
-          >
-            <Text style={styles.secondaryText}>Regenerate content</Text>
-          </Pressable>
-        ) : null}
-        {!isSkipped && !sheetBusy ? (
-          <Pressable
-            style={styles.destructiveBtn}
-            onPress={onSkipLesson}
-            testID="lesson-skip-cta"
-          >
-            <Text style={styles.destructiveBtnText}>Skip lesson</Text>
-          </Pressable>
-        ) : null}
-        <Pressable style={styles.secondary} onPress={() => setSelectedLesson(null)}>
-          <Text style={styles.secondaryText}>Close</Text>
+        <Pressable
+          style={styles.closeBtn}
+          onPress={() => setSelectedLesson(null)}
+          testID="lesson-close-cta"
+        >
+          <Text style={styles.closeBtnText}>Close</Text>
         </Pressable>
       </BottomSheetOrModal>
 
@@ -703,22 +859,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  exercisePane: {
-    flex: 1,
-    gap: spacing.md,
-  },
-  exerciseEmpty: {
-    flex: 1,
-    gap: spacing.sm,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  exerciseTitle: {
-    color: onboardingColors.text,
-    fontFamily: fonts.display,
-    fontSize: 18,
-    textAlign: 'center',
-  },
   exerciseBody: {
     color: onboardingColors.textMuted,
     fontFamily: fonts.body,
@@ -728,48 +868,66 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: '#FFFFFF',
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    backgroundColor: onboardingColors.border,
+    borderRadius: 999,
+    height: 4,
+    marginBottom: spacing.xs,
+    width: 40,
   },
   sheetTitle: {
     color: onboardingColors.text,
     fontFamily: fonts.display,
-    fontSize: 20,
+    fontSize: 22,
+    textAlign: 'center',
   },
   sheetHook: {
     color: onboardingColors.text,
     fontFamily: fonts.body,
-    fontSize: 14,
+    fontSize: 15,
     fontStyle: 'italic',
+    lineHeight: 22,
+    textAlign: 'center',
   },
   sheetMeaning: {
     color: onboardingColors.textMuted,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
-  sheetSoon: {
+  sheetStatus: {
     color: onboardingColors.textMuted,
     fontFamily: fonts.body,
     fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  sheetActions: {
+    gap: spacing.sm,
     marginTop: spacing.xs,
   },
   generatingRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
+    justifyContent: 'center',
     marginTop: spacing.sm,
   },
   primaryCta: {
     alignItems: 'center',
     backgroundColor: onboardingColors.text,
     borderRadius: radii.pill,
-    marginTop: spacing.sm,
     paddingVertical: spacing.md,
   },
   primaryCtaText: {
     color: '#FFFFFF',
     fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    letterSpacing: 0.3,
+    fontSize: 15,
   },
   switcher: {
     backgroundColor: '#FFFFFF',
@@ -787,6 +945,41 @@ const styles = StyleSheet.create({
   },
   switchTitle: {
     color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
+  },
+  secondary: {
+    alignItems: 'center',
+    borderColor: onboardingColors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+  },
+  secondaryText: {
+    color: onboardingColors.text,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
+  },
+  skipLink: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  skipLinkText: {
+    color: '#C04545',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+  },
+  closeBtn: {
+    alignItems: 'center',
+    borderColor: onboardingColors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    marginTop: spacing.xs,
+    opacity: 0.85,
+    paddingVertical: spacing.md,
+  },
+  closeBtnText: {
+    color: onboardingColors.textMuted,
     fontFamily: fonts.bodySemiBold,
     fontSize: 15,
   },
@@ -908,29 +1101,6 @@ const styles = StyleSheet.create({
   zoomBtnText: {
     color: onboardingColors.text,
     fontSize: 18,
-    fontWeight: '700',
-  },
-  secondary: {
-    alignItems: 'center',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  secondaryText: {
-    color: onboardingColors.text,
-    fontWeight: '700',
-  },
-  destructiveBtn: {
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  destructiveBtnText: {
-    color: '#B91C1C',
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 14,
     fontWeight: '700',
   },
 });

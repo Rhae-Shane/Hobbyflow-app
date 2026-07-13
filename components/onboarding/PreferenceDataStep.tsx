@@ -37,15 +37,17 @@ export function PreferenceDataStep({
         }
         onChange={(value) => onSelectionChange(dataKey, value)}
       />
-      <View style={styles.other}>
-        <OtherInput
-          placeholder={step.otherPlaceholder ?? 'Other (optional)'}
-          showAddButton={step.showOtherAddButton}
-          value={otherText}
-          onAdd={onAddOther}
-          onChange={onOtherTextChange}
-        />
-      </View>
+      {step.showOtherAddButton ? (
+        <View style={styles.other}>
+          <OtherInput
+            placeholder={step.otherPlaceholder ?? 'Other (optional)'}
+            showAddButton
+            value={otherText}
+            onAdd={onAddOther}
+            onChange={onOtherTextChange}
+          />
+        </View>
+      ) : null}
     </>
   );
 }

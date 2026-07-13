@@ -18,6 +18,8 @@ type Props = {
   lessons: RoadmapLessonRow[];
   onNodePress: (item: LearningPathNode) => void;
   onJournalPress?: (sectionId: string) => void;
+  /** Section overflow menu (concept map + regenerate). */
+  onSectionMenu?: (section: LearningPathSectionHeader) => void;
   /** Optional featured module card rendered below search. */
   header?: ReactNode;
   bottomInset?: number;
@@ -34,6 +36,7 @@ export function LearningPathScroll({
   lessons,
   onNodePress,
   onJournalPress,
+  onSectionMenu,
   header,
   bottomInset = 0,
   listRef,
@@ -145,6 +148,7 @@ export function LearningPathScroll({
                   expanded={expanded}
                   onToggle={toggleSection}
                   onJournalPress={onJournalPress}
+                  onMenuPress={onSectionMenu}
                 />
                 {expanded ? (
                   <View style={styles.lessonList}>
@@ -181,7 +185,9 @@ const styles = StyleSheet.create({
   searchBar: {
     alignItems: 'center',
     backgroundColor: theme.colors.background,
+    borderColor: theme.colors.border,
     borderRadius: radii.pill,
+    borderWidth: 1,
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
     paddingVertical: 4,

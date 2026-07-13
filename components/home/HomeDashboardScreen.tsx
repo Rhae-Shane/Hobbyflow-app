@@ -14,11 +14,12 @@ import { HobbyRoadmapBlocks } from '@/components/home/HobbyRoadmapBlocks';
 import type { HobbyBlockProgress } from '@/components/home/HobbyRoadmapBlock';
 import { QuickActionGrid } from '@/components/home/QuickActionGrid';
 import { HomeDailyTaskBlock } from '@/components/home/HomeDailyTaskBlock';
-import { FLOATING_TAB_BAR_HEIGHT_WITH_ASK } from '@/components/navigation/tabBarLayout';
 import { PlantDoodle } from '@/components/home/HobbyBlockIllustration';
+import { GraphPaperGrid } from '@/components/ui/GraphPaperGrid';
 import { dashboardColors, dashboardRadii } from '@/constants/dashboardTokens';
 import { fonts, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { useFloatingTabBarOccupiedHeight } from '@/hooks/useFloatingTabBarInset';
 import { fetchHobbyNameIllustrationMap } from '@/services/hobbyCatalog';
 import { fetchRoadmapDetail, fetchUserRoadmaps } from '@/services/roadmaps';
 import { useRoadmapUiStore } from '@/store/useRoadmapUiStore';
@@ -28,9 +29,9 @@ type Props = {
   contentBottomInset?: number;
 };
 
-export function HomeDashboardScreen({
-  contentBottomInset = FLOATING_TAB_BAR_HEIGHT_WITH_ASK + 24,
-}: Props) {
+export function HomeDashboardScreen({ contentBottomInset }: Props) {
+  const defaultBottomInset = useFloatingTabBarOccupiedHeight(true) + 24;
+  const resolvedBottomInset = contentBottomInset ?? defaultBottomInset;
   const router = useRouter();
   const { user } = useAuth();
   const username = useUserStore((s) => s.username);
@@ -88,10 +89,11 @@ export function HomeDashboardScreen({
 
   return (
     <View style={styles.root}>
+      <GraphPaperGrid />
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: contentBottomInset },
+          { paddingBottom: resolvedBottomInset },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -140,6 +142,7 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: dashboardColors.background,
     flex: 1,
+    overflow: 'hidden',
   },
   content: {
     paddingHorizontal: spacing.md,

@@ -157,7 +157,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     dataKey: 'learningStyles',
     minSelection: 1,
     chipLayout: 'grid',
-    showOtherAddButton: true,
   },
   {
     id: 'interstitial-noted',

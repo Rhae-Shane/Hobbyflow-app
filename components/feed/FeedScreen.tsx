@@ -14,7 +14,8 @@ import { BottomSheetOrModal } from '@/components/BottomSheetOrModal';
 import { CommentsSheet } from '@/components/feed/CommentsSheet';
 import { FeedComposeCard } from '@/components/feed/FeedComposeCard';
 import { PostCard } from '@/components/feed/PostCard';
-import { ScreenShell, TAB_SCROLL_BOTTOM_INSET } from '@/components/ui/ScreenShell';
+import { ScreenShell, useTabScrollBottomInset } from '@/components/ui/ScreenShell';
+import { GraphPaperGrid } from '@/components/ui/GraphPaperGrid';
 import { learnInPublic } from '@/constants/learnInPublic';
 import { theme } from '@/constants/theme';
 import { fonts, spacing } from '@/constants/tokens';
@@ -30,6 +31,7 @@ export function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const username = useUserStore((s) => s.username);
+  const tabScrollBottomInset = useTabScrollBottomInset();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const postsRef = useRef<FeedPost[]>([]);
   const [myTags, setMyTags] = useState<PostHobbyTag[]>([]);
@@ -124,6 +126,7 @@ export function FeedScreen() {
 
   return (
     <ScreenShell padded={false}>
+      <GraphPaperGrid />
       <BottomSheetOrModal
         visible={filterOpen}
         onClose={() => setFilterOpen(false)}
@@ -181,7 +184,7 @@ export function FeedScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
             gap: spacing.md,
-            paddingBottom: TAB_SCROLL_BOTTOM_INSET,
+            paddingBottom: tabScrollBottomInset,
             paddingTop: spacing.sm,
             flexGrow: 1,
           }}
@@ -220,7 +223,7 @@ export function FeedScreen() {
                     router.push('/(app)/claim-username' as never);
                   }
                 }}
-                onNeedHobby={() => router.push('/(app)/roadmap-creation' as never)}
+                onNeedHobby={() => router.push('/(app)/(tabs)/generate' as never)}
               />
               {filter.kind === 'tag' ? (
                 <View style={styles.activeFilter}>
@@ -238,7 +241,7 @@ export function FeedScreen() {
               {emptyCta ? (
                 <Pressable
                   style={styles.emptyBtn}
-                  onPress={() => router.push('/(app)/roadmap-creation' as never)}
+                  onPress={() => router.push('/(app)/(tabs)/generate' as never)}
                 >
                   <Text style={styles.emptyBtnText}>{emptyCta}</Text>
                 </Pressable>

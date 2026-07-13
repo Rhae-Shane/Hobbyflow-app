@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 type Props = {
   role: 'user' | 'assistant';
@@ -20,32 +20,41 @@ export function ChatBubble({ role, content }: Props) {
 
 const styles = StyleSheet.create({
   row: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     width: '100%',
   },
   rowUser: {
     alignItems: 'flex-end',
   },
   bubble: {
-    borderRadius: radii.card,
-    maxWidth: '88%',
+    maxWidth: '86%',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
   },
   bubbleAssistant: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderWidth: 1,
+    backgroundColor: theme.colors.surface,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: theme.radii.block,
+    borderColor: theme.colors.border,
+    borderTopLeftRadius: theme.radii.block,
+    borderTopRightRadius: theme.radii.block,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   bubbleUser: {
-    backgroundColor: onboardingColors.primary,
+    backgroundColor: theme.colors.cta,
+    borderBottomLeftRadius: theme.radii.block,
+    borderBottomRightRadius: 6,
+    borderTopLeftRadius: theme.radii.block,
+    borderTopRightRadius: theme.radii.block,
   },
   text: {
-    color: onboardingColors.text,
+    color: theme.colors.text,
+    fontFamily: fonts.body,
     fontSize: 15,
     lineHeight: 22,
   },
   textUser: {
-    color: onboardingColors.primaryText,
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyMedium,
   },
 });

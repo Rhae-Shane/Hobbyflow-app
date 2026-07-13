@@ -11,6 +11,7 @@ import {
   HomeTabIcon,
 } from '@/components/icons/AppIcons';
 import { theme } from '@/constants/theme';
+import { useFloatingTabBarPaddingBottom } from '@/hooks/useFloatingTabBarInset';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { hapticMedium, hapticSelection } from '@/utils/haptics';
 
@@ -159,79 +160,80 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const focusedRoute = state.routes[state.index]?.name;
   const showAskCoach = focusedRoute === 'index';
   const keyboardVisible = useKeyboardVisible();
+  const paddingBottom = useFloatingTabBarPaddingBottom();
 
   useEffect(() => {
     if (!showAskCoach && askOpen) setAskOpen(false);
   }, [showAskCoach, askOpen]);
 
-  // Keep the floating pill from covering focused inputs above the keyboard.
-  if (keyboardVisible) {
-    return (
-      <AskAnythingSheet visible={askOpen} onClose={() => setAskOpen(false)} />
-    );
-  }
-
   return (
     <>
-      <View style={styles.wrap} pointerEvents="box-none">
-        {showAskCoach ? (
-          <View style={styles.askWrap}>
-            <AskCoachButton
-              onPress={() => {
-                hapticMedium();
-                setAskOpen(true);
-              }}
-            />
-          </View>
-        ) : null}
+      {/*
+        Keep AskAnythingSheet mounted in a stable tree position. Hiding the tab
+        bar on keyboard open must not remount the sheet (that reset the chat /
+        input and looked like a full re-render when tapping the ask field).
+      */}
+      {!keyboardVisible ? (
+        <View style={[styles.wrap, { paddingBottom }]} pointerEvents="box-none">
+          {showAskCoach ? (
+            <View style={styles.askWrap}>
+              <AskCoachButton
+                onPress={() => {
+                  hapticMedium();
+                  setAskOpen(true);
+                }}
+              />
+            </View>
+          ) : null}
 
-        <View style={styles.pill}>
-          {TAB_ORDER.map((routeName) => {
-              const route = state.routes.find((r) => r.name === routeName);
-              if (!route) return null;
-              const index = state.routes.findIndex((r) => r.key === route.key);
-              const focused = state.index === index;
-              const { options } = descriptors[route.key];
-              const Icon = TAB_ICONS[route.name];
-              const label =
-                typeof options.tabBarLabel === 'string'
-                  ? options.tabBarLabel
-                  : options.title ?? route.name;
+          <View style={styles.pill}>
+            {TAB_ORDER.map((routeName) => {
+                const route = state.routes.find((r) => r.name === routeName);
+                if (!route) return null;
+                const index = state.routes.findIndex((r) => r.key === route.key);
+                const focused = state.index === index;
+                const { options } = descriptors[route.key];
+                const Icon = TAB_ICONS[route.name];
+                const label =
+                  typeof options.tabBarLabel === 'string'
+                    ? options.tabBarLabel
+                    : options.title ?? route.name;
 
-              return (
-                <Pressable
-                  key={route.key}
-                  accessibilityRole="button"
-                  accessibilityState={focused ? { selected: true } : {}}
-                  accessibilityLabel={label}
-                  onPress={() => {
-                    if (!focused) hapticSelection();
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-                    if (!focused && !event.defaultPrevented) {
-                      navigation.navigate(route.name, route.params);
-                    }
-                  }}
-                  style={[styles.tabBtn, focused && styles.tabBtnActive]}
-                  testID={`tab-${route.name}`}
-                >
-                  {Icon ? (
-                    <Icon color={focused ? ACTIVE : INACTIVE} focused={focused} />
-                  ) : null}
-                  <Text
-                    style={[styles.tabLabel, focused && styles.tabLabelActive]}
-                    numberOfLines={1}
+                return (
+                  <Pressable
+                    key={route.key}
+                    accessibilityRole="button"
+                    accessibilityState={focused ? { selected: true } : {}}
+                    accessibilityLabel={label}
+                    onPress={() => {
+                      if (!focused) hapticSelection();
+                      const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                      });
+                      if (!focused && !event.defaultPrevented) {
+                        navigation.navigate(route.name, route.params);
+                      }
+                    }}
+                    style={[styles.tabBtn, focused && styles.tabBtnActive]}
+                    testID={`tab-${route.name}`}
                   >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    {Icon ? (
+                      <Icon color={focused ? ACTIVE : INACTIVE} focused={focused} />
+                    ) : null}
+                    <Text
+                      style={[styles.tabLabel, focused && styles.tabLabelActive]}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <AskAnythingSheet visible={askOpen} onClose={() => setAskOpen(false)} />
     </>
@@ -251,7 +253,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     gap: 10,
     left: 0,
-    paddingBottom: 10,
     paddingHorizontal: 16,
     position: 'absolute',
     right: 0,

@@ -4,12 +4,12 @@ export type PostAuthRoute =
   | '/(app)/claim-username'
   | '/(app)/welcome'
   | '/(app)/preferences'
-  | '/(app)/roadmap-creation'
   | '/(app)/(tabs)';
 
 /**
  * Post-auth navigation.
- * Username → welcome intro → preferences → roadmap creation → tabs.
+ * Username → welcome intro → preferences → tabs.
+ * Roadmap creation is optional (Generation tab), not part of first-run.
  * Users who already finished (flag or existing hobbies) skip first-run screens.
  */
 export function getPostAuthRoute(options: {
@@ -28,7 +28,7 @@ export function getPostAuthRoute(options: {
   if (!options.hasPreferences) {
     return '/(app)/welcome';
   }
-  return '/(app)/roadmap-creation';
+  return '/(app)/(tabs)';
 }
 
 export { hasCompletedPreferences };

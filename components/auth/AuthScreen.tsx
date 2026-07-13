@@ -87,10 +87,11 @@ export function AuthScreen() {
         >
           <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <View style={styles.brandRow}>
-          <BrandLogo size={48} />
-          <Text style={styles.title}>HobbyFlow</Text>
+
+        <View style={styles.logoWrap}>
+          <BrandLogo size={72} />
         </View>
+
         <Text style={styles.subtitle}>Sign in to save your roadmap across devices.</Text>
 
         <TextInput
@@ -184,16 +185,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: 14,
   },
-  brandRow: {
+  logoWrap: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  title: {
-    color: theme.colors.text,
-    fontFamily: fonts.display,
-    fontSize: 34,
-    letterSpacing: -0.5,
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
   },
   subtitle: {
     color: theme.colors.textMuted,
@@ -201,6 +196,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   input: {
     backgroundColor: '#F3F4F6',

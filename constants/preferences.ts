@@ -85,118 +85,91 @@ export const RESOURCE_BUDGETS = [
 export const LEARNING_STYLES = ['Video', 'Audio', 'Text', 'Daily tasks'] as const;
 
 export const LEARNING_STYLE_SUPPORT = {
-  currentlySupports: ['Video', 'Text'],
-  workingOn: ['Daily tasks'],
-  alsoSupports: ['Audio'],
+  currentlySupports: ['Video', 'Audio', 'Text', 'Daily tasks'],
+  workingOn: [] as const,
+  alsoSupports: [] as const,
 } as const;
 
 export const DEFAULT_CONTENT_LANGUAGE = 'en';
 
 export const TOP_GOALS_AI_HINTS: Record<(typeof TOP_GOALS)[number], string> = {
-  'Pick up a brand-new hobby':
-    'User is exploring; prioritize fundamentals, low barrier to entry, and early wins.',
-  'Get back into a hobby I paused':
-    'User is returning after a break; acknowledge rust and use a gentle ramp-up.',
-  'Level up skills I already have':
-    'User has baseline skills; focus on refinement, gaps, and next-level techniques.',
-  'Make better use of spare time':
-    'User wants efficient sessions; favor concise, high-value techniques.',
-  'Relax and de-stress':
-    'Keep pressure low; favor enjoyable, low-stakes practice over grind.',
-  'Connect with others through hobbies':
-    'Where relevant, mention social play, clubs, jam sessions, or shared practice.',
-  'Build a creative outlet':
-    'Emphasize expressive output and projects the user can show or share.',
-  'Compete or perform':
-    'Prioritize performance-ready skills, consistency under pressure, and measurable improvement.',
+  'Pick up a brand-new hobby': 'fundamentals, early wins',
+  'Get back into a hobby I paused': 'gentle ramp-up after rust',
+  'Level up skills I already have': 'refine gaps, next-level',
+  'Make better use of spare time': 'short, high-value sessions',
+  'Relax and de-stress': 'low-stakes, enjoyable practice',
+  'Connect with others through hobbies': 'social play when relevant',
+  'Build a creative outlet': 'expressive projects to share',
+  'Compete or perform': 'performance-ready, measurable progress',
 };
 
 export const USER_ROLES_AI_HINTS: Record<(typeof USER_ROLES)[number], string> = {
-  'Working professional': 'Limited weekday time; use practical, after-work friendly examples.',
-  Student: 'Flexible but busy schedule; learning-oriented framing works well.',
-  'Parent / caregiver': 'Very short windows; favor home-friendly, interruptible practice.',
-  'Creative professional': 'Connect techniques to aesthetics, craft, and creative process.',
-  'Retired or semi-retired': 'More time available; depth and thorough practice are welcome.',
-  'Freelancer / self-employed': 'Irregular schedule; modular sessions that stand alone.',
-  'Shift worker': 'Variable availability; favor short, repeatable drills.',
+  'Working professional': 'limited weekday time',
+  Student: 'busy, learning-oriented',
+  'Parent / caregiver': 'short, interruptible home practice',
+  'Creative professional': 'craft / creative process',
+  'Retired or semi-retired': 'more time for depth',
+  'Freelancer / self-employed': 'modular, irregular schedule',
+  'Shift worker': 'short, repeatable drills',
 };
 
 export const AGE_RANGES_AI_HINTS: Record<(typeof AGE_RANGES)[number], string> = {
-  'Under 18': 'Use age-appropriate examples and simpler language where helpful.',
-  '18–24': 'Examples can assume digital fluency and flexible experimentation.',
-  '25–34': 'Balance practical progress with busy adult life constraints.',
-  '35–44': 'Favor efficient techniques that fit established routines.',
-  '45–54': 'Allow time to rebuild fundamentals; avoid assuming prior exposure.',
-  '55–64': 'Be patient with new tools; clear step-by-step guidance helps.',
-  '65+': 'Prioritize clarity, pacing, and low-friction practice setups.',
-  'Prefer not to say': 'Do not infer age; keep examples neutral and inclusive.',
+  'Under 18': 'age-appropriate',
+  '18–24': 'digital-fluent, experimental OK',
+  '25–34': 'busy adult life',
+  '35–44': 'efficient, routine-friendly',
+  '45–54': 'rebuild fundamentals patiently',
+  '55–64': 'clear step-by-step',
+  '65+': 'clear pacing, low friction',
+  'Prefer not to say': 'age-neutral',
 };
 
 export const ACCESSIBILITY_NEEDS_AI_HINTS: Record<(typeof ACCESSIBILITY_NEEDS)[number], string> = {
-  'None — no adjustments needed': 'No accessibility adjustments requested.',
-  'Vision impairment / low vision':
-    'Favor high-contrast text resources, audio alternatives, and large-visual demos.',
-  Blindness:
-    'Prioritize audio, tactile, and descriptive non-visual instructions; avoid visual-only steps.',
-  'Hearing impairment / deafness':
-    'Favor captioned video, text guides, and visual demos; avoid audio-only techniques.',
-  'Motor or dexterity limitations':
-    'Suggest low-dexterity alternatives, adaptive tools, and shorter physical drills.',
-  'Chronic pain or fatigue':
-    'Keep sessions short, allow breaks, and avoid high-intensity repetitive drills.',
-  'ADHD / attention differences':
-    'Use shorter tasks, clear structure, and frequent checkpoints; reduce overwhelm.',
-  'Autism / sensory sensitivity':
-    'Avoid overstimulating formats; offer predictable steps and calm pacing.',
-  'Dyslexia / reading differences':
-    'Minimize long reading; prefer video, audio, and chunked text with clear headings.',
-  'Anxiety in high-pressure practice':
-    'Keep practice low-stakes; avoid competitive framing unless the user wants it.',
-  'Prefer not to say': 'Do not assume accessibility needs; keep recommendations flexible.',
+  'None — no adjustments needed': 'no a11y adjustments',
+  'Vision impairment / low vision': 'high-contrast, audio alt, large demos',
+  Blindness: 'audio/tactile only; no visual-only',
+  'Hearing impairment / deafness': 'captioned video/text; no audio-only',
+  'Motor or dexterity limitations': 'low-dexterity / adaptive options',
+  'Chronic pain or fatigue': 'short sessions, allow breaks',
+  'ADHD / attention differences': 'short tasks, clear structure',
+  'Autism / sensory sensitivity': 'predictable, calm pacing',
+  'Dyslexia / reading differences': 'prefer video/audio; chunked text',
+  'Anxiety in high-pressure practice': 'low-stakes practice',
+  'Prefer not to say': 'keep flexible',
 };
 
 export const LEARNING_STRENGTHS_AI_HINTS: Record<(typeof LEARNING_STRENGTHS)[number], string> = {
-  'Strong visual memory': 'Lean on diagrams, demos, and visual pattern drills.',
-  'Learn well by listening': 'Prioritize audio explainers and verbal walkthroughs.',
-  'Learn well by doing': 'Prioritize hands-on drills and immediate practice reps.',
-  'Good at breaking down steps': 'Offer structured milestones the user can decompose further.',
-  'High stamina for practice': 'Can handle longer sessions and deeper technique stacks.',
-  'Strong focus for long sessions': 'Multi-part sessions and longer projects are acceptable.',
-  'Creative problem-solving': 'Include open-ended challenges and creative variations.',
-  'Good with patterns and systems': 'Use frameworks, repeatable systems, and pattern drills.',
+  'Strong visual memory': 'diagrams, demos',
+  'Learn well by listening': 'audio explainers',
+  'Learn well by doing': 'hands-on drills',
+  'Good at breaking down steps': 'structured milestones',
+  'High stamina for practice': 'longer sessions OK',
+  'Strong focus for long sessions': 'multi-part sessions OK',
+  'Creative problem-solving': 'open-ended challenges',
+  'Good with patterns and systems': 'frameworks, pattern drills',
 };
 
 export const PRACTICE_ENVIRONMENTS_AI_HINTS: Record<(typeof PRACTICE_ENVIRONMENTS)[number], string> = {
-  'At home only':
-    'Avoid techniques that require studios, travel, or specialized venues.',
-  'Small space / apartment':
-    'Favor compact setups; avoid large equipment or noisy drills.',
-  'Need quiet practice':
-    'Avoid loud techniques; prefer silent or low-noise exercises.',
-  'Can practice outdoors':
-    'Outdoor-friendly drills and location-flexible practice are OK.',
-  'Travel often':
-    'Prefer portable, minimal-equipment techniques that work on the go.',
-  'Share space with others':
-    'Keep practice discreet; avoid disruptive or space-hogging activities.',
+  'At home only': 'no studio/venue required',
+  'Small space / apartment': 'compact, low-noise setups',
+  'Need quiet practice': 'silent / low-noise only',
+  'Can practice outdoors': 'outdoor OK',
+  'Travel often': 'portable, minimal gear',
+  'Share space with others': 'discreet, non-disruptive',
 };
 
 export const RESOURCE_BUDGETS_AI_HINTS: Record<(typeof RESOURCE_BUDGETS)[number], string> = {
-  'Free resources only':
-    'Use free videos, articles, and open tools only; avoid paid gear or subscriptions in search_query.',
-  'Low budget':
-    'Prefer low-cost or household items; mention affordable starter options.',
-  'Moderate budget':
-    'Basic starter gear is OK; avoid premium or professional-only equipment.',
-  'Will invest in gear or courses':
-    'Paid tools, courses, and quality gear recommendations are acceptable when helpful.',
+  'Free resources only': 'free only; no paid gear',
+  'Low budget': 'low-cost / household items',
+  'Moderate budget': 'basic starter gear OK',
+  'Will invest in gear or courses': 'paid tools OK when helpful',
 };
 
 export const LEARNING_STYLES_AI_HINTS: Record<(typeof LEARNING_STYLES)[number], string> = {
-  Video: 'Prefer video-led techniques with demos the user can follow along.',
-  Audio: 'Prefer listen-and-practice content such as podcasts or guided audio drills.',
-  Text: 'Prefer articles, guides, and written walkthroughs.',
-  'Daily tasks': 'Prefer small actionable daily tasks over long passive sessions.',
+  Video: 'video demos',
+  Audio: 'podcasts / guided audio',
+  Text: 'articles / written guides',
+  'Daily tasks': 'small daily actions',
 };
 
 type SavedPreferences = {
@@ -210,29 +183,13 @@ type SavedPreferences = {
   learningStyles: string[];
 };
 
-function singleHintLine(
-  label: string,
-  hints: Record<string, string>,
-  sectionTitle: string,
-): string[] {
-  if (!label) return [];
-  const hint = hints[label];
-  return [`${sectionTitle}:`, hint ? `- ${label}: ${hint}` : `- ${label}`];
-}
-
-function hintLines(
-  selections: string[],
-  hints: Record<string, string>,
-  sectionTitle: string,
-): string[] {
-  if (selections.length === 0) return [];
-
-  const lines = selections.map((label) => {
-    const hint = hints[label];
-    return hint ? `- ${label}: ${hint}` : `- ${label}`;
-  });
-
-  return [`${sectionTitle}:`, ...lines];
+function compactItems(selections: string[], hints: Record<string, string>): string {
+  return selections
+    .map((label) => {
+      const hint = hints[label];
+      return hint ? `${label} (${hint})` : label;
+    })
+    .join('; ');
 }
 
 function buildAccessibilityOverrides(preferences: SavedPreferences): string[] {
@@ -241,65 +198,68 @@ function buildAccessibilityOverrides(preferences: SavedPreferences): string[] {
   const learningStyles = new Set(preferences.learningStyles);
 
   if (accessibilityNeeds.has('Blindness') && learningStyles.has('Video')) {
-    overrides.push(
-      'Accessibility override: Blindness takes priority over video preference — do not assign video modality.',
-    );
+    overrides.push('Override: Blindness > video — do not assign video.');
   }
 
   if (accessibilityNeeds.has('Hearing impairment / deafness') && learningStyles.has('Audio')) {
-    overrides.push(
-      'Accessibility override: Hearing impairment takes priority over audio preference — do not assign audio modality.',
-    );
+    overrides.push('Override: Hearing impairment > audio — do not assign audio.');
   }
 
   return overrides;
 }
 
-/** Plain-text block for AI planner / chat prompts from saved user preferences. */
+/**
+ * Compact plain-text block for AI planner / chat prompts.
+ * Accessibility labels stay as `- Label:` lines so server parsers still match.
+ */
 export function buildPreferencesAiContext(preferences: SavedPreferences): string {
-  const ageHint = preferences.ageRange
-    ? AGE_RANGES_AI_HINTS[preferences.ageRange as (typeof AGE_RANGES)[number]]
-    : undefined;
-  const ageLine = preferences.ageRange
-    ? `Age range: ${preferences.ageRange}${ageHint ? ` (${ageHint})` : ''}`
-    : '';
+  const lines: string[] = [];
 
-  const resourceHint = preferences.resourceBudget
-    ? RESOURCE_BUDGETS_AI_HINTS[preferences.resourceBudget as (typeof RESOURCE_BUDGETS)[number]]
-    : undefined;
-  const resourceLine = preferences.resourceBudget
-    ? `Resource budget: ${preferences.resourceBudget}${resourceHint ? ` (${resourceHint})` : ''}`
-    : '';
+  if (preferences.userRole) {
+    const hint = USER_ROLES_AI_HINTS[preferences.userRole as (typeof USER_ROLES)[number]];
+    lines.push(`Role: ${preferences.userRole}${hint ? ` — ${hint}` : ''}`);
+  }
 
-  const sections = [
-    ...singleHintLine(preferences.userRole, USER_ROLES_AI_HINTS, 'Learner context'),
-    ageLine,
-    ...hintLines(preferences.topGoals, TOP_GOALS_AI_HINTS, 'Hobby goals'),
-    ...hintLines(
-      preferences.accessibilityNeeds,
-      ACCESSIBILITY_NEEDS_AI_HINTS,
-      'Accessibility and learning needs',
-    ),
-    ...hintLines(
-      preferences.learningStrengths,
-      LEARNING_STRENGTHS_AI_HINTS,
-      'Learning strengths',
-    ),
-    ...hintLines(
-      preferences.practiceEnvironments,
-      PRACTICE_ENVIRONMENTS_AI_HINTS,
-      'Practice environment',
-    ),
-    resourceLine,
-    ...hintLines(
-      preferences.learningStyles,
-      LEARNING_STYLES_AI_HINTS,
-      'Preferred content format',
-    ),
-    ...buildAccessibilityOverrides(preferences),
-  ].filter(Boolean);
+  if (preferences.ageRange) {
+    const hint = AGE_RANGES_AI_HINTS[preferences.ageRange as (typeof AGE_RANGES)[number]];
+    lines.push(`Age: ${preferences.ageRange}${hint ? ` — ${hint}` : ''}`);
+  }
 
-  return sections.join('\n');
+  if (preferences.topGoals.length > 0) {
+    lines.push(`Goals: ${compactItems(preferences.topGoals, TOP_GOALS_AI_HINTS)}`);
+  }
+
+  if (preferences.accessibilityNeeds.length > 0) {
+    lines.push('Accessibility:');
+    for (const label of preferences.accessibilityNeeds) {
+      const hint = ACCESSIBILITY_NEEDS_AI_HINTS[label as (typeof ACCESSIBILITY_NEEDS)[number]];
+      lines.push(hint ? `- ${label}: ${hint}` : `- ${label}`);
+    }
+  }
+
+  if (preferences.learningStrengths.length > 0) {
+    lines.push(`Strengths: ${compactItems(preferences.learningStrengths, LEARNING_STRENGTHS_AI_HINTS)}`);
+  }
+
+  if (preferences.practiceEnvironments.length > 0) {
+    lines.push(
+      `Environment: ${compactItems(preferences.practiceEnvironments, PRACTICE_ENVIRONMENTS_AI_HINTS)}`,
+    );
+  }
+
+  if (preferences.resourceBudget) {
+    const hint =
+      RESOURCE_BUDGETS_AI_HINTS[preferences.resourceBudget as (typeof RESOURCE_BUDGETS)[number]];
+    lines.push(`Budget: ${preferences.resourceBudget}${hint ? ` — ${hint}` : ''}`);
+  }
+
+  if (preferences.learningStyles.length > 0) {
+    lines.push(`Formats: ${compactItems(preferences.learningStyles, LEARNING_STYLES_AI_HINTS)}`);
+  }
+
+  lines.push(...buildAccessibilityOverrides(preferences));
+
+  return lines.join('\n');
 }
 
 export function normalizeAccessibilitySelection(

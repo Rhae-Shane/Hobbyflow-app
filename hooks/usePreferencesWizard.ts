@@ -11,6 +11,7 @@ import {
 } from '@/lib/preferencesWizardSteps';
 import { userPreferencesSchema } from '@/lib/validation/preferences.schema';
 import { saveUserPreferences } from '@/services/preferences';
+import { completeOnboarding } from '@/services/user';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { hasCompletedOnboarding, useUserStore } from '@/store/useUserStore';
 import type { UserPreferences } from '@/types/preferences.types';
@@ -49,6 +50,7 @@ export function usePreferencesWizard() {
   const storedPreferences = usePreferencesStore((s) => s.preferences);
   const setPreferences = usePreferencesStore((s) => s.setPreferences);
   const completedOnboardingAt = useUserStore((s) => s.completedOnboardingAt);
+  const setCompletedOnboardingAt = useUserStore((s) => s.setCompletedOnboardingAt);
   const isUserHydrated = useIsUserHydrated();
 
   const [draft, setDraft] = useState<UserPreferences>(EMPTY_PREFERENCES);
@@ -74,13 +76,36 @@ export function usePreferencesWizard() {
 
     if (hasCompletedPreferences(storedPreferences)) {
       setInitialized(true);
-      router.replace('/(app)/roadmap-creation');
+      // Prefs may already be saved while completed_onboarding_at is still null
+      // (e.g. user quit before the last interstitial). Persist the flag, then leave.
+      if (!user) {
+        router.replace('/(app)/(tabs)');
+        return;
+      }
+      void completeOnboarding(user.id)
+        .then(() => {
+          setCompletedOnboardingAt(new Date().toISOString());
+        })
+        .catch(() => {
+          // Still enter the app; hydrate backfill can retry the cloud write.
+        })
+        .finally(() => {
+          router.replace('/(app)/(tabs)');
+        });
       return;
     }
 
     setStepIndex(getPreferencesResumeStepIndex(storedPreferences));
     setInitialized(true);
-  }, [completedOnboardingAt, initialized, isUserHydrated, router, storedPreferences]);
+  }, [
+    completedOnboardingAt,
+    initialized,
+    isUserHydrated,
+    router,
+    setCompletedOnboardingAt,
+    storedPreferences,
+    user,
+  ]);
 
   const step = WIZARD_STEPS[stepIndex];
   const isLastStep = stepIndex === WIZARD_STEPS.length - 1;
@@ -132,8 +157,11 @@ export function usePreferencesWizard() {
     if (!user) {
       throw new Error('Not signed in');
     }
-    await saveUserPreferences(user.id, nextDraft);
+    const { preferencesComplete } = await saveUserPreferences(user.id, nextDraft);
     setPreferences(nextDraft);
+    if (preferencesComplete) {
+      setCompletedOnboardingAt(new Date().toISOString());
+    }
   };
 
   const handleBack = () => {
@@ -196,7 +224,20 @@ export function usePreferencesWizard() {
         setValidationError(VALIDATION_MESSAGES.incomplete);
         return;
       }
-      router.replace('/(app)/roadmap-creation');
+
+      if (!hasCompletedOnboarding(useUserStore.getState().completedOnboardingAt)) {
+        setIsSaving(true);
+        try {
+          await persistDraft(nextDraft);
+        } catch {
+          setValidationError(VALIDATION_MESSAGES.saveFailed);
+          setIsSaving(false);
+          return;
+        }
+        setIsSaving(false);
+      }
+
+      router.replace('/(app)/(tabs)');
       return;
     }
 

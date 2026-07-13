@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { QuickReplyChips } from '@/components/roadmap-creation/QuickReplyChips';
-import { onboardingColors } from '@/constants/onboardingTokens';
-import { radii, spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 
 type Props = {
   quickReplies: { text: string }[];
@@ -24,9 +24,11 @@ export function McqClarificationBlock({
   onSend,
   disabled = false,
 }: Props) {
-  const canSendMulti =
-    multiSelect && (selectedChips.length > 0 || freeText.trim().length > 0) && !disabled;
-  const canSendSingle = !multiSelect && freeText.trim().length > 0 && !disabled;
+  const canSend =
+    !disabled &&
+    (multiSelect
+      ? selectedChips.length > 0 || freeText.trim().length > 0
+      : freeText.trim().length > 0);
 
   return (
     <View style={styles.block}>
@@ -37,59 +39,77 @@ export function McqClarificationBlock({
         onSelect={onSelectChip}
         disabled={disabled}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Type your own answer…"
-        placeholderTextColor={onboardingColors.textMuted}
-        value={freeText}
-        onChangeText={onChangeFreeText}
-        editable={!disabled}
-        multiline
-      />
-      {multiSelect ? (
+
+      <View style={styles.composer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Type your own answer…"
+          placeholderTextColor={theme.colors.textMuted}
+          value={freeText}
+          onChangeText={onChangeFreeText}
+          editable={!disabled}
+          multiline
+          onSubmitEditing={() => {
+            if (canSend) onSend();
+          }}
+        />
         <Pressable
-          style={[styles.sendButton, !canSendMulti && styles.sendDisabled]}
+          style={[styles.send, !canSend && styles.sendDisabled]}
           onPress={onSend}
-          disabled={!canSendMulti}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityLabel="Send answer"
         >
-          <Text style={styles.sendText}>Send</Text>
+          <Text style={styles.sendGlyph}>↑</Text>
         </Pressable>
-      ) : canSendSingle ? (
-        <Pressable style={styles.sendButton} onPress={onSend} disabled={disabled}>
-          <Text style={styles.sendText}>Send</Text>
-        </Pressable>
-      ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   block: {
-    gap: spacing.sm,
+    gap: spacing.md,
     marginTop: spacing.xs,
+    width: '100%',
+  },
+  composer: {
+    alignItems: 'flex-end',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.block,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: onboardingColors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    color: onboardingColors.text,
+    color: theme.colors.text,
+    flex: 1,
+    fontFamily: fonts.body,
     fontSize: 15,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    lineHeight: 20,
+    maxHeight: 100,
+    minHeight: 40,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
   },
-  sendButton: {
+  send: {
     alignItems: 'center',
-    backgroundColor: onboardingColors.primary,
-    borderRadius: radii.card,
-    paddingVertical: spacing.sm,
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   sendDisabled: {
-    opacity: 0.45,
+    opacity: 0.28,
   },
-  sendText: {
-    color: onboardingColors.primaryText,
-    fontWeight: '700',
+  sendGlyph: {
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
+    lineHeight: 20,
   },
 });

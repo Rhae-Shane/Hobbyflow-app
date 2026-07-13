@@ -47,20 +47,8 @@ export function NotedSummaryStep({ selectedStyles }: Props) {
   return (
     <View style={styles.container}>
       <BulletList
-        title="HobbyFlow currently supports:"
+        title="HobbyFlow supports:"
         items={LEARNING_STYLE_SUPPORT.currentlySupports}
-        selectedStyles={selectedStyles}
-        highlightSelected
-      />
-      <BulletList
-        title="We're working on:"
-        items={LEARNING_STYLE_SUPPORT.workingOn}
-        selectedStyles={selectedStyles}
-        highlightSelected
-      />
-      <BulletList
-        title="HobbyFlow also supports:"
-        items={LEARNING_STYLE_SUPPORT.alsoSupports}
         selectedStyles={selectedStyles}
         highlightSelected
       />

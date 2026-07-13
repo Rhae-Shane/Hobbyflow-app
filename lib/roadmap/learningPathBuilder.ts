@@ -1,6 +1,6 @@
 import type { RoadmapLessonRow, RoadmapNodeRow } from '@/types/roadmap.types';
 
-export type PathNodeKind = 'lesson' | 'applied' | 'section_review';
+export type PathNodeKind = 'lesson' | 'applied' | 'practice';
 export type PathNodeVisualState = 'current' | 'available' | 'locked' | 'completed' | 'skipped';
 
 export type LearningPathSectionHeader = {
@@ -91,7 +91,7 @@ export type BuildLearningPathInput = {
 
 /**
  * Build Inspo-style learning path items from Spec 13 roadmap detail.
- * Order: section header → lessons (by path_order) → applied (if any) → locked section review.
+ * Order: section header → lessons (by path_order) → applied (if any) → practice CTA.
  * Section progress uses active lessons (total − skipped) as the denominator.
  */
 export function buildLearningPath(input: BuildLearningPathInput): LearningPathItem[] {
@@ -179,13 +179,13 @@ export function buildLearningPath(input: BuildLearningPathInput): LearningPathIt
 
     items.push({
       kind: 'path_node',
-      nodeKind: 'section_review',
-      id: `section-review-${section.id}`,
+      nodeKind: 'practice',
+      id: `section-practice-${section.id}`,
       nodeId: null,
       sectionId: section.id,
-      label: 'Section Review',
-      subtitle: '0/2 sessions',
-      visualState: 'locked',
+      label: 'Now practice',
+      subtitle: 'Open practice',
+      visualState: 'available',
       pathOrder: Number.MAX_SAFE_INTEGER,
       staggerIndex: staggerOffset(globalStagger),
     });

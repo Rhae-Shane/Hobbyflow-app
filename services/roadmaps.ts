@@ -42,14 +42,41 @@ export function generateRoadmapMindMap(roadmapId: string, options?: { force?: bo
 export function generateLesson(
   roadmapId: string,
   lessonId: string,
-  options?: { force?: boolean },
+  options?: { force?: boolean; rewriteSession?: boolean },
 ) {
   return apiRequest<GenerateLessonResponse>(
     `/api/v1/roadmaps/${roadmapId}/lessons/${lessonId}/generate`,
     {
       method: 'POST',
       body: options ?? {},
-      timeoutMs: 120_000,
+      timeoutMs: 180_000,
+    },
+  );
+}
+
+export type RegenerateSectionResponse = {
+  sectionId: string;
+  sectionName: string;
+  lessonIds: string[];
+  contentResults?: Array<{
+    lessonId: string;
+    status: 'success' | 'generating' | 'failed' | 'skipped';
+    message?: string;
+  }>;
+};
+
+/** Rewrites section + lesson titles/hooks/meanings. Optionally regenerates multimedia server-side. */
+export function regenerateSection(
+  roadmapId: string,
+  sectionId: string,
+  options?: { regenerateContent?: boolean },
+) {
+  return apiRequest<RegenerateSectionResponse>(
+    `/api/v1/roadmaps/${roadmapId}/sections/${sectionId}/regenerate`,
+    {
+      method: 'POST',
+      body: options ?? {},
+      timeoutMs: 180_000,
     },
   );
 }

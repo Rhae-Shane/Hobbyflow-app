@@ -20,11 +20,13 @@ import {
   RequestChangesModal,
 } from '@/components/roadmap-creation/LessonPlanOutlineCard';
 import { McqClarificationBlock } from '@/components/roadmap-creation/McqClarificationBlock';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
+import { GraphPaperGrid } from '@/components/ui/GraphPaperGrid';
 import { buildPreferencesAiContext } from '@/constants/preferences';
 import { onboardingColors } from '@/constants/onboardingTokens';
-import { spacing } from '@/constants/tokens';
+import { theme } from '@/constants/theme';
+import { fonts, spacing } from '@/constants/tokens';
 import { useAuth } from '@/hooks/useAuth';
+import { useFloatingTabBarOccupiedHeight } from '@/hooks/useFloatingTabBarInset';
 import { useIsUserHydrated } from '@/hooks/useIsUserHydrated';
 import { useRoadmapCreationChat } from '@/hooks/useRoadmapCreationChat';
 import { fetchUserHobbies } from '@/services/hobbies';
@@ -88,8 +90,9 @@ export function RoadmapCreationChatScreen({
   const [isMaterializing, setIsMaterializing] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [showChangesModal, setShowChangesModal] = useState(false);
+  const tabBarHeight = useFloatingTabBarOccupiedHeight();
 
-  const bottomPad = embeddedInTabs ? FLOATING_TAB_BAR_HEIGHT + 8 : spacing.lg;
+  const bottomPad = embeddedInTabs ? tabBarHeight + 8 : spacing.lg;
 
   useEffect(() => {
     // Only bounce completed users off the standalone onboarding stack route.
@@ -227,7 +230,8 @@ export function RoadmapCreationChatScreen({
 
   if (chat.showLessonPlan && chat.lessonPlan) {
     return (
-      <View style={[styles.container, { paddingBottom: bottomPad }]}>
+      <View style={[styles.container, styles.containerRelative, { paddingBottom: bottomPad }]}>
+        <GraphPaperGrid />
         {chat.isRequestingOutline || isMaterializing ? (
           <View style={styles.outlineLoading}>
             <ActivityIndicator color={onboardingColors.primary} size="large" />
@@ -278,16 +282,20 @@ export function RoadmapCreationChatScreen({
       <View
         style={[
           styles.container,
+          styles.containerRelative,
           { paddingBottom: bottomPad, paddingTop: spacing.sm },
         ]}
       >
+        <GraphPaperGrid />
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
             <Text style={styles.backText}>← Ideas</Text>
           </Pressable>
         ) : null}
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
 
         <ScrollView
           ref={scrollRef}
@@ -326,7 +334,7 @@ export function RoadmapCreationChatScreen({
 
           {chat.isLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={onboardingColors.primary} />
+              <ActivityIndicator color={theme.colors.navActive} />
               <Text style={styles.loadingText}>
                 {chat.isRequestingOutline ? 'Building your outline…' : 'Thinking…'}
               </Text>
@@ -336,13 +344,15 @@ export function RoadmapCreationChatScreen({
           {chat.error ? <InlineError message={chat.error} /> : null}
         </ScrollView>
 
-        <ChatInputBar
-          value={chat.inputText}
-          onChange={chat.setInputText}
-          onSend={() => void chat.sendMessage(chat.inputText)}
-          placeholder={inputPlaceholder}
-          disabled={chat.isLoading || isMaterializing}
-        />
+        {!showMcq ? (
+          <ChatInputBar
+            value={chat.inputText}
+            onChange={chat.setInputText}
+            onSend={() => void chat.sendMessage(chat.inputText)}
+            placeholder={inputPlaceholder}
+            disabled={chat.isLoading || isMaterializing}
+          />
+        ) : null}
       </View>
     </KeyboardAvoidingView>
   );
@@ -356,28 +366,39 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
   },
+  containerRelative: {
+    overflow: 'hidden',
+    position: 'relative',
+  },
   backBtn: {
     alignSelf: 'flex-start',
   },
   backText: {
-    color: onboardingColors.primaryText,
+    color: theme.colors.navActive,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 15,
-    fontWeight: '600',
+  },
+  header: {
+    gap: 4,
+    marginBottom: spacing.xs,
   },
   title: {
-    color: onboardingColors.text,
-    fontSize: 28,
-    fontWeight: '700',
+    color: theme.colors.text,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    color: onboardingColors.textMuted,
-    fontSize: 15,
-    marginBottom: spacing.xs,
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 20,
   },
   chat: { flex: 1 },
   chatContent: {
     gap: spacing.xs,
     paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
   },
   loadingRow: {
     alignItems: 'center',
@@ -392,20 +413,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: onboardingColors.textMuted,
+    color: theme.colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 14,
   },
   failureCard: {
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
   primaryButton: {
-    backgroundColor: onboardingColors.primary,
-    borderRadius: 12,
-    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    backgroundColor: theme.colors.cta,
+    borderRadius: theme.radii.pill,
+    paddingVertical: 14,
   },
   primaryButtonText: {
-    color: onboardingColors.primaryText,
-    fontWeight: '700',
+    color: theme.colors.ctaText,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
     textAlign: 'center',
   },
 });

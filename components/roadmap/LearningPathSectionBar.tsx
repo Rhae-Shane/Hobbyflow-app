@@ -10,6 +10,8 @@ type Props = {
   onToggle: (sectionId: string) => void;
   /** Optional secondary action (concept map). */
   onJournalPress?: (sectionId: string) => void;
+  /** Overflow menu — concept map + regenerate section. */
+  onMenuPress?: (item: LearningPathSectionHeader) => void;
 };
 
 export function LearningPathSectionBar({
@@ -17,6 +19,7 @@ export function LearningPathSectionBar({
   expanded,
   onToggle,
   onJournalPress,
+  onMenuPress,
 }: Props) {
   return (
     <Pressable
@@ -36,7 +39,20 @@ export function LearningPathSectionBar({
         </Text>
       </View>
 
-      {onJournalPress ? (
+      {onMenuPress ? (
+        <Pressable
+          accessibilityLabel={`Section options for ${item.name}`}
+          onPress={(e) => {
+            e?.stopPropagation?.();
+            onMenuPress(item);
+          }}
+          style={styles.journal}
+          testID={`section-menu-${item.sectionId}`}
+          hitSlop={8}
+        >
+          <Text style={styles.journalIcon}>☰</Text>
+        </Pressable>
+      ) : onJournalPress ? (
         <Pressable
           accessibilityLabel={`Open concept map for ${item.name}`}
           onPress={(e) => {

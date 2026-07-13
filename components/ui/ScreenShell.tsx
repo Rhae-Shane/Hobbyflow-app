@@ -1,11 +1,13 @@
 import { type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { FLOATING_TAB_BAR_HEIGHT } from '@/components/navigation/tabBarLayout';
 import { dashboardColors } from '@/constants/dashboardTokens';
 import { spacing } from '@/constants/tokens';
+import { useFloatingTabBarOccupiedHeight } from '@/hooks/useFloatingTabBarInset';
 
-/** Bottom padding for scroll content on tab screens (Ask Coach + tab pill). */
-export const TAB_SCROLL_BOTTOM_INSET = FLOATING_TAB_BAR_HEIGHT + 24;
+/** Bottom padding for scroll content on tab screens (clears floating pill + system inset). */
+export function useTabScrollBottomInset(extra = 24): number {
+  return useFloatingTabBarOccupiedHeight() + extra;
+}
 
 type Props = {
   children: ReactNode;
