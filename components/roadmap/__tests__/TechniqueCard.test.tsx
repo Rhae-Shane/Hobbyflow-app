@@ -41,6 +41,6 @@ describe('TechniqueCard', () => {
       : title.props.style;
 
     expect(flattened.textDecorationLine).toBe('line-through');
-    expect(flattened.color).toBe('#9CA3AF');
+    expect(flattened.color).toBe('#8A8F98');
   });
 });

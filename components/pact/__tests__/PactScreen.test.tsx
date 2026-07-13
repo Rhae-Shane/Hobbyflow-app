@@ -74,7 +74,7 @@ describe('PactScreen', () => {
 
   it('renders create form when no active pact', () => {
     render(<PactScreen />);
-    expect(screen.getByText('The Pact')).toBeTruthy();
+    expect(screen.getByText('Seal a pact')).toBeTruthy();
     expect(screen.getByText('Pacts kept: 2')).toBeTruthy();
     expect(screen.getByText('Press & hold to seal your pact')).toBeTruthy();
     expect(mockHydrate).toHaveBeenCalledWith('user-1');
